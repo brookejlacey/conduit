@@ -75,9 +75,16 @@ export function findFxRatePda(pair: Buffer): [PublicKey, number] {
   );
 }
 
-export function findAuditEntryPda(agent: PublicKey, slot: BN): [PublicKey, number] {
+export function findAuditEntryPda(agent: PublicKey, nonce: BN): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
-    [Buffer.from(AUDIT_SEED), agent.toBuffer(), slot.toArrayLike(Buffer, 'le', 8)],
+    [Buffer.from(AUDIT_SEED), agent.toBuffer(), nonce.toArrayLike(Buffer, 'le', 8)],
     AUDIT_LOG_PROGRAM_ID,
+  );
+}
+
+export function findSettlementConfigPda(): [PublicKey, number] {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from('config')],
+    SETTLEMENT_PROGRAM_ID,
   );
 }

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useConnection } from '@solana/wallet-adapter-react';
 import type { AgentIdentity } from '@conduit/sdk';
-import { AGENT_REGISTRY_PROGRAM_ID } from '@conduit/sdk';
+import { AGENT_REGISTRY_PROGRAM_ID, decodeAgentIdentity } from '@conduit/sdk';
 
 interface UseAgentsResult {
   agents: AgentIdentity[];
@@ -29,8 +29,18 @@ export function useAgents(): UseAgentsResult {
           commitment: 'confirmed',
         });
 
-        console.log(`Found ${accounts.length} agent registry accounts`);
-        setAgents([]);
+        const decoded: AgentIdentity[] = [];
+        for (const { account } of accounts) {
+          try {
+            const agent = decodeAgentIdentity(Buffer.from(account.data));
+            decoded.push(agent);
+          } catch {
+            // Skip accounts that fail to decode (e.g., institution accounts)
+            continue;
+          }
+        }
+
+        setAgents(decoded);
       } catch (err) {
         setError(err instanceof Error ? err : new Error('Failed to fetch agents'));
       } finally {

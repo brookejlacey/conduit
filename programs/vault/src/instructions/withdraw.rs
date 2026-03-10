@@ -59,23 +59,11 @@ pub fn handler(
         VaultError::CounterpartyNotApproved
     );
 
-    // Policy check: daily limit
-    let seconds_per_day: i64 = 86400;
-    if now - vault.policy.last_reset_ts >= seconds_per_day {
-        vault.policy.daily_spent = 0;
-        vault.policy.last_reset_ts = now;
-    }
+    // Policy check: daily limit (reset + check + update in one call)
     require!(
-        vault.policy.check_daily_limit(amount, now),
+        vault.policy.reset_check_and_spend(amount, now),
         VaultError::DailyLimitExceeded
     );
-
-    // Update daily spent
-    vault.policy.daily_spent = vault
-        .policy
-        .daily_spent
-        .checked_add(amount)
-        .ok_or(VaultError::Overflow)?;
 
     // Update vault totals
     vault.total_deposits = vault

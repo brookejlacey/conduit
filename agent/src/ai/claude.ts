@@ -28,7 +28,7 @@ export class ClaudeClient {
 
     try {
       const message = await this.client.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 2048,
         system: systemPrompt,
         messages: [
@@ -62,8 +62,8 @@ export class ClaudeClient {
   }
 
   private parseStructuredResponse(text: string): ClaudeAnalysisResponse {
-    // Attempt to parse JSON from Claude's response
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    // Attempt to parse JSON from Claude's response (non-greedy to avoid matching multiple objects)
+    const jsonMatch = text.match(/\{[\s\S]*?\}/);
     if (jsonMatch) {
       try {
         const parsed = JSON.parse(jsonMatch[0]);
@@ -85,9 +85,11 @@ export class ClaudeClient {
       }
     }
 
-    // Fallback: parse from natural language
-    const shouldAct =
-      text.toLowerCase().includes('recommend') || text.toLowerCase().includes('should proceed');
+    // Fallback: parse from natural language — avoid false positives from negations
+    const lower = text.toLowerCase();
+    const hasPositive = lower.includes('recommend') || lower.includes('should proceed');
+    const hasNegation = lower.includes('do not recommend') || lower.includes('should not proceed') || lower.includes('not recommend');
+    const shouldAct = hasPositive && !hasNegation;
     return {
       shouldAct,
       reasoning: text,

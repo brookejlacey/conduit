@@ -9,10 +9,11 @@ interface VaultCardProps {
 }
 
 export function VaultCard({ vault, index }: VaultCardProps) {
-  const totalDeposits = vault.totalDeposits.toNumber();
-  const yieldAccrued = vault.yieldAccrued.toNumber();
-  const dailySpent = vault.policy.dailySpent.toNumber();
-  const dailyLimit = vault.policy.dailySpendLimit.toNumber();
+  // Use safe string-based conversion to avoid BN.toNumber() overflow for values > 2^53
+  const totalDeposits = Number(vault.totalDeposits.toString());
+  const yieldAccrued = Number(vault.yieldAccrued.toString());
+  const dailySpent = Number(vault.policy.dailySpent.toString());
+  const dailyLimit = Number(vault.policy.dailySpendLimit.toString());
   const utilization = dailyLimit > 0 ? (dailySpent / dailyLimit) * 100 : 0;
 
   const utilizationColor =
@@ -82,7 +83,7 @@ export function VaultCard({ vault, index }: VaultCardProps) {
             ))}
           </div>
           <p className="mt-1 text-xs text-conduit-navy-500">
-            Max tx: {formatUsx(vault.policy.maxSingleTxSize.toNumber())} |{' '}
+            Max tx: {formatUsx(Number(vault.policy.maxSingleTxSize.toString()))} |{' '}
             {vault.policy.approvedCounterparties.length} counterparties
           </p>
         </div>

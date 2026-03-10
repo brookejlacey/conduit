@@ -12,6 +12,10 @@ declare_id!("7Mm3yQsmkpEeWT5LSpjZn4vucT4n1vcLswG6LCHSZeAe");
 pub mod settlement {
     use super::*;
 
+    pub fn initialize_config(ctx: Context<InitializeConfig>, max_fx_rate_age: i64) -> Result<()> {
+        instructions::initialize_config::handler(ctx, max_fx_rate_age)
+    }
+
     pub fn create_batch(ctx: Context<CreateBatch>, batch_id: u64) -> Result<()> {
         instructions::create_batch::handler(ctx, batch_id)
     }
@@ -21,9 +25,8 @@ pub mod settlement {
         amount_usx: u64,
         destination_currency: [u8; 3],
         fx_rate: u64,
-        net_offset: i64,
     ) -> Result<()> {
-        instructions::add_entry::handler(ctx, amount_usx, destination_currency, fx_rate, net_offset)
+        instructions::add_entry::handler(ctx, amount_usx, destination_currency, fx_rate)
     }
 
     pub fn execute_settlement(ctx: Context<ExecuteSettlement>) -> Result<()> {
