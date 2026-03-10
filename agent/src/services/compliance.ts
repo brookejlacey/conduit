@@ -1,5 +1,6 @@
 import { AnchorProvider } from '@coral-xyz/anchor';
 import { AgentConfig } from '../config';
+import { VAULT_PROGRAM_ID, decodeVaultAccount } from '@conduit/sdk';
 import type { Logger } from 'pino';
 
 export interface ComplianceViolation {
@@ -18,8 +19,8 @@ export interface ComplianceReport {
 
 export class ComplianceService {
   constructor(
-    _provider: AnchorProvider,
-    private config: AgentConfig,
+    private provider: AnchorProvider,
+    _config: AgentConfig,
     private logger: Logger,
   ) {}
 
@@ -73,18 +74,47 @@ export class ComplianceService {
     this.logger.info('Running full compliance scan...');
     const violations: ComplianceViolation[] = [];
 
-    // In production, scan all vaults and agents on-chain
-    // For hackathon, demonstrate the scan structure
-
-    // Check vault policy utilization
-    const vaultUtilization = 0.85; // Mock: 85% of daily limit used
-    if (vaultUtilization > 0.8) {
-      violations.push({
-        type: 'daily_limit',
-        severity: 'warning',
-        description: `Vault daily spend utilization at ${(vaultUtilization * 100).toFixed(1)}%`,
-        vault: this.config.programs.vault.toBase58(),
+    try {
+      // Fetch all vault accounts from on-chain
+      const accounts = await this.provider.connection.getProgramAccounts(VAULT_PROGRAM_ID, {
+        commitment: 'confirmed',
       });
+
+      for (const { pubkey, account } of accounts) {
+        try {
+          const vault = decodeVaultAccount(Buffer.from(account.data));
+          const dailySpent = vault.policy.dailySpent.toNumber();
+          const dailyLimit = vault.policy.dailySpendLimit.toNumber();
+          const utilization = dailyLimit > 0 ? dailySpent / dailyLimit : 0;
+
+          if (utilization > 0.8) {
+            violations.push({
+              type: 'daily_limit',
+              severity: utilization > 0.95 ? 'critical' : 'warning',
+              description: `Vault daily spend utilization at ${(utilization * 100).toFixed(1)}%`,
+              vault: pubkey.toBase58(),
+            });
+          }
+
+          // Check for near-zero remaining balance
+          const totalDeposits = vault.totalDeposits.toNumber();
+          if (totalDeposits > 0 && totalDeposits < 1000 * 1e6) {
+            violations.push({
+              type: 'threshold',
+              severity: 'warning',
+              description: `Vault balance critically low: ${totalDeposits / 1e6} USX`,
+              vault: pubkey.toBase58(),
+            });
+          }
+        } catch {
+          // Skip accounts that fail to decode (e.g., deposit receipts)
+          continue;
+        }
+      }
+
+      this.logger.info({ vaultCount: accounts.length, violations: violations.length }, 'Compliance scan complete');
+    } catch (err) {
+      this.logger.error({ err }, 'Failed to fetch vault accounts for compliance scan');
     }
 
     const report: ComplianceReport = {

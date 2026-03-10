@@ -43,14 +43,17 @@ pub fn handler(
         RegistryError::TooManyScopedPrograms
     );
 
-    let institution = &mut ctx.accounts.institution;
-    require!(institution.active, RegistryError::InstitutionInactive);
+    // Capture keys before taking mutable borrows
+    let institution_key = ctx.accounts.institution.key();
+    let agent_pubkey_key = ctx.accounts.agent_pubkey.key();
+
+    require!(ctx.accounts.institution.active, RegistryError::InstitutionInactive);
 
     let clock = Clock::get()?;
 
     let agent = &mut ctx.accounts.agent;
-    agent.institution = ctx.accounts.institution.key();
-    agent.agent_pubkey = ctx.accounts.agent_pubkey.key();
+    agent.institution = institution_key;
+    agent.agent_pubkey = agent_pubkey_key;
     agent.authority_tier = authority_tier;
     agent.scoped_programs = scoped_programs;
     agent.active = true;
@@ -58,6 +61,7 @@ pub fn handler(
     agent.last_action_at = clock.unix_timestamp;
     agent.bump = ctx.bumps.agent;
 
+    let institution = &mut ctx.accounts.institution;
     institution.agent_count = institution
         .agent_count
         .checked_add(1)
@@ -65,8 +69,8 @@ pub fn handler(
 
     msg!(
         "Agent {} registered under institution {} with tier {}",
-        agent.agent_pubkey,
-        institution.key(),
+        agent_pubkey_key,
+        institution_key,
         authority_tier
     );
     Ok(())

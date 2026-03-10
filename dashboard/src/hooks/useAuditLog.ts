@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useConnection } from '@solana/wallet-adapter-react';
 import type { AuditEntry } from '@conduit/sdk';
-import { AUDIT_LOG_PROGRAM_ID } from '@conduit/sdk';
+import { AUDIT_LOG_PROGRAM_ID, decodeAuditEntry } from '@conduit/sdk';
 
 interface UseAuditLogResult {
   entries: AuditEntry[];
@@ -29,8 +29,21 @@ export function useAuditLog(): UseAuditLogResult {
           commitment: 'confirmed',
         });
 
-        console.log(`Found ${accounts.length} audit log entries`);
-        setEntries([]);
+        const decoded: AuditEntry[] = [];
+        for (const { account } of accounts) {
+          try {
+            const entry = decodeAuditEntry(Buffer.from(account.data));
+            decoded.push(entry);
+          } catch {
+            // Skip accounts that fail to decode
+            continue;
+          }
+        }
+
+        // Sort by timestamp descending (most recent first)
+        decoded.sort((a, b) => b.timestamp.toNumber() - a.timestamp.toNumber());
+
+        setEntries(decoded);
       } catch (err) {
         setError(err instanceof Error ? err : new Error('Failed to fetch audit log'));
       } finally {

@@ -2,6 +2,9 @@ use anchor_lang::prelude::*;
 use crate::state::{SettlementBatch, SettlementEntry, SettlementStatus};
 use crate::errors::SettlementError;
 
+/// Vault program ID for ownership validation
+const VAULT_PROGRAM_ID: Pubkey = pubkey!("GdmDuzHbXd2hytSpPyfwnaARSCTnntbTnniAPLr3JRHb");
+
 #[derive(Accounts)]
 pub struct AddEntry<'info> {
     #[account(
@@ -25,10 +28,18 @@ pub struct AddEntry<'info> {
     )]
     pub entry: Account<'info, SettlementEntry>,
 
-    /// CHECK: Validated as an existing vault account by the caller
+    /// Source vault — must be owned by the vault program
+    /// CHECK: Validated by owner check against vault program ID
+    #[account(
+        constraint = from_vault.owner == &VAULT_PROGRAM_ID @ SettlementError::InvalidVault,
+    )]
     pub from_vault: UncheckedAccount<'info>,
 
-    /// CHECK: Validated as an existing vault account by the caller
+    /// Destination vault — must be owned by the vault program
+    /// CHECK: Validated by owner check against vault program ID
+    #[account(
+        constraint = to_vault.owner == &VAULT_PROGRAM_ID @ SettlementError::InvalidVault,
+    )]
     pub to_vault: UncheckedAccount<'info>,
 
     #[account(
@@ -45,10 +56,17 @@ pub fn handler(
     amount_usx: u64,
     destination_currency: [u8; 3],
     fx_rate: u64,
-    net_offset: i64,
 ) -> Result<()> {
     require!(amount_usx > 0, SettlementError::InvalidAmount);
     require!(fx_rate > 0, SettlementError::InvalidFxRate);
+
+    // Compute net_offset on-chain from amount and FX rate (scaled by 1e8)
+    let net_offset_raw = (amount_usx as u128)
+        .checked_mul(fx_rate as u128)
+        .ok_or(SettlementError::Overflow)?
+        / 100_000_000u128;
+    let net_offset = i64::try_from(net_offset_raw)
+        .map_err(|_| error!(SettlementError::Overflow))?;
 
     let entry = &mut ctx.accounts.entry;
     entry.batch = ctx.accounts.batch.key();
@@ -70,7 +88,7 @@ pub fn handler(
         .checked_add(amount_usx)
         .ok_or(SettlementError::Overflow)?;
 
-    // Update net total (handle signed offset)
+    // Update net total using on-chain computed offset
     if net_offset >= 0 {
         batch.total_net = batch
             .total_net

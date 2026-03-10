@@ -40,13 +40,34 @@ impl PolicyConfig {
         self.approved_counterparties.contains(counterparty)
     }
 
+    /// Check daily limit without mutation. Used for read-only validation.
     pub fn check_daily_limit(&self, amount: u64, current_ts: i64) -> bool {
         let seconds_per_day: i64 = 86400;
         if current_ts - self.last_reset_ts >= seconds_per_day {
-            // Day has rolled over, only check against limit with fresh counter
             amount <= self.daily_spend_limit
         } else {
             self.daily_spent.checked_add(amount).map_or(false, |total| total <= self.daily_spend_limit)
+        }
+    }
+
+    /// Atomically reset (if needed), check, and update daily spend.
+    /// Returns true if the spend was within limits and has been recorded.
+    pub fn reset_check_and_spend(&mut self, amount: u64, current_ts: i64) -> bool {
+        let seconds_per_day: i64 = 86400;
+
+        // Reset daily counter if a full day has passed
+        if current_ts - self.last_reset_ts >= seconds_per_day {
+            self.daily_spent = 0;
+            self.last_reset_ts = current_ts;
+        }
+
+        // Check if the new spend fits within the daily limit
+        match self.daily_spent.checked_add(amount) {
+            Some(new_total) if new_total <= self.daily_spend_limit => {
+                self.daily_spent = new_total;
+                true
+            }
+            _ => false,
         }
     }
 }

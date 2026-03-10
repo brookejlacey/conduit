@@ -65,7 +65,11 @@ export class ConduitAgent {
     try {
       const decision = await this.treasury.analyzeAndRebalance();
       if (decision.shouldRebalance) {
-        await this.compliance.validateAction('rebalance', decision as unknown as Record<string, unknown>);
+        const isCompliant = await this.compliance.validateAction('rebalance', decision as unknown as Record<string, unknown>);
+        if (!isCompliant) {
+          this.logger.warn('Rebalance blocked by compliance check');
+          return;
+        }
         await this.treasury.executeRebalance(decision);
         await this.auditLogger.logAction(
           2, // Rebalance
@@ -85,7 +89,11 @@ export class ConduitAgent {
     try {
       const batch = await this.settlement.buildBatch();
       if (batch.entries.length > 0) {
-        await this.compliance.validateAction('settlement', batch as unknown as Record<string, unknown>);
+        const isCompliant = await this.compliance.validateAction('settlement', batch as unknown as Record<string, unknown>);
+        if (!isCompliant) {
+          this.logger.warn('Settlement batch blocked by compliance check');
+          return;
+        }
         await this.settlement.executeBatch(batch);
         await this.auditLogger.logAction(3, null, batch.totalNet, batch.reasoning);
       }

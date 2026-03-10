@@ -38,3 +38,9 @@ export interface FxRate {
   oracle: PublicKey;
   bump: number;
 }
+
+export interface SettlementConfig {
+  admin: PublicKey;
+  maxFxRateAge: BN;
+  bump: number;
+}

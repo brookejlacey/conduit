@@ -22,4 +22,16 @@ pub enum SettlementError {
 
     #[msg("Batch already settled")]
     AlreadySettled,
+
+    #[msg("Invalid vault: account not owned by vault program")]
+    InvalidVault,
+
+    #[msg("Admin authorization required for new oracle assignment")]
+    AdminRequired,
+
+    #[msg("Settlement config already initialized")]
+    ConfigAlreadyInitialized,
+
+    #[msg("FX rate is stale (older than max age)")]
+    StaleFxRate,
 }

@@ -13,17 +13,16 @@ pub struct ExecuteSettlement<'info> {
     )]
     pub batch: Account<'info, SettlementBatch>,
 
-    /// Source vault's USX token account
-    #[account(mut)]
+    /// Source USX token account — must be owned by the batch creator
+    #[account(
+        mut,
+        constraint = from_token_account.owner == creator.key() @ SettlementError::Unauthorized,
+    )]
     pub from_token_account: Account<'info, TokenAccount>,
 
-    /// Destination vault's USX token account
+    /// Destination USX token account
     #[account(mut)]
     pub to_token_account: Account<'info, TokenAccount>,
-
-    /// The vault PDA that owns the from_token_account
-    /// CHECK: Validated by the token account owner check
-    pub vault_authority: UncheckedAccount<'info>,
 
     #[account(
         constraint = creator.key() == batch.creator @ SettlementError::Unauthorized,
@@ -42,8 +41,6 @@ pub fn handler(ctx: Context<ExecuteSettlement>) -> Result<()> {
     batch.status = SettlementStatus::Processing;
 
     // Execute the net settlement transfer
-    // In a full implementation, this would iterate over all entries
-    // For hackathon, we execute the net amount as a single transfer
     let net_amount = batch.total_net;
 
     if net_amount > 0 {

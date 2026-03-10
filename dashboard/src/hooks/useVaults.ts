@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useConnection } from '@solana/wallet-adapter-react';
 import type { VaultAccount } from '@conduit/sdk';
-import { VAULT_PROGRAM_ID } from '@conduit/sdk';
+import { VAULT_PROGRAM_ID, decodeVaultAccount } from '@conduit/sdk';
 
 interface UseVaultsResult {
   vaults: VaultAccount[];
@@ -25,17 +25,22 @@ export function useVaults(): UseVaultsResult {
         setLoading(true);
         setError(null);
 
-        // Fetch all program accounts for the vault program
         const accounts = await connection.getProgramAccounts(VAULT_PROGRAM_ID, {
           commitment: 'confirmed',
         });
 
-        // In production, deserialize accounts using Anchor's IDL
-        // For now, we return the raw account list length for debugging
-        console.log(`Found ${accounts.length} vault accounts`);
+        const decoded: VaultAccount[] = [];
+        for (const { account } of accounts) {
+          try {
+            const vault = decodeVaultAccount(Buffer.from(account.data));
+            decoded.push(vault);
+          } catch {
+            // Skip accounts that fail to decode (e.g., deposit receipts have different layout)
+            continue;
+          }
+        }
 
-        // Deserialization would happen here with the IDL
-        setVaults([]);
+        setVaults(decoded);
       } catch (err) {
         setError(err instanceof Error ? err : new Error('Failed to fetch vaults'));
       } finally {

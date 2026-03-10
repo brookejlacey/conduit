@@ -18,7 +18,7 @@ pub struct UpdatePolicy<'info> {
 pub fn handler(ctx: Context<UpdatePolicy>, new_policy: PolicyConfig) -> Result<()> {
     let vault = &mut ctx.accounts.vault;
 
-    // Verify the signer is one of the multisig signers
+    // Verify the primary signer is one of the multisig signers
     let signer_key = ctx.accounts.signer.key();
     let is_valid_signer = vault.multisig_signers.contains(&signer_key);
     require!(is_valid_signer, VaultError::Unauthorized);
@@ -28,20 +28,24 @@ pub fn handler(ctx: Context<UpdatePolicy>, new_policy: PolicyConfig) -> Result<(
         VaultError::TooManyCounterparties
     );
 
-    // Ensure new policy doesn't exceed the space allocated for this vault account.
-    // The vault was allocated with space for the original number of counterparties,
-    // so the new policy cannot have more counterparties than what was originally allocated.
     require!(
         new_policy.approved_counterparties.len() <= vault.policy.approved_counterparties.len(),
         VaultError::TooManyCounterparties
     );
 
-    // For hackathon simplicity, we accept a single multisig signer
-    // In production, this would collect signatures and verify threshold
-    // The threshold check is simplified: authority or any signer can update
+    // Count valid signers: primary signer + any additional signers in remaining_accounts
+    let mut signer_count: u8 = 1; // The primary signer already validated above
+    for account in ctx.remaining_accounts.iter() {
+        if account.is_signer && vault.multisig_signers.contains(account.key) {
+            // Don't double-count the primary signer
+            if *account.key != signer_key {
+                signer_count = signer_count.saturating_add(1);
+            }
+        }
+    }
+
     require!(
-        vault.multisig_threshold <= 1
-            || signer_key == vault.authority,
+        signer_count >= vault.multisig_threshold,
         VaultError::MultisigThresholdNotMet
     );
 
