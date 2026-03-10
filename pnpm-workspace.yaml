@@ -1,0 +1,5 @@
+packages:
+  - "sdk"
+  - "agent"
+  - "dashboard"
+  - "tests"

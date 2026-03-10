@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg-primary: #0a1029;
+  --color-bg-secondary: #151f4f;
+  --color-bg-card: #1a2556;
+  --color-bg-hover: #233064;
+  --color-text-primary: #e8eaf0;
+  --color-text-secondary: #9ea5bf;
+  --color-text-muted: #7780a5;
+  --color-accent: #0091ff;
+  --color-accent-hover: #36a2ff;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-border: #2b396e;
+}
+
+body {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border border-conduit-navy-700 bg-conduit-navy-800 p-6;
+  }
+
+  .card-hover {
+    @apply card transition-colors hover:border-conduit-blue-800 hover:bg-conduit-navy-700;
+  }
+
+  .btn-primary {
+    @apply rounded-lg bg-conduit-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-conduit-blue-500;
+  }
+
+  .btn-secondary {
+    @apply rounded-lg border border-conduit-navy-600 bg-conduit-navy-700 px-4 py-2 text-sm font-medium text-conduit-navy-200 transition-colors hover:bg-conduit-navy-600;
+  }
+
+  .sidebar-link {
+    @apply flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-conduit-navy-300 transition-colors hover:bg-conduit-navy-800 hover:text-conduit-navy-100;
+  }
+
+  .sidebar-link-active {
+    @apply sidebar-link bg-conduit-navy-800 text-conduit-blue-400;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}

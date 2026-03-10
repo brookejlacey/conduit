@@ -1,0 +1,3 @@
+[workspace]
+members = ["programs/vault", "programs/agent-registry", "programs/settlement", "programs/audit-log"]
+resolver = "2"

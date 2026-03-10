@@ -1,0 +1,50 @@
+version: "3.9"
+
+services:
+  validator:
+    build:
+      context: .
+      dockerfile: validator.Dockerfile
+    ports:
+      - "8899:8899"
+      - "8900:8900"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8899/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - validator-data:/root/.config/solana
+
+  agent:
+    build:
+      context: ..
+      dockerfile: docker/agent.Dockerfile
+    depends_on:
+      validator:
+        condition: service_healthy
+    environment:
+      - NEXT_PUBLIC_SOLANA_RPC_URL=http://validator:8899
+      - NEXT_PUBLIC_SOLANA_NETWORK=localnet
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - AGENT_KEYPAIR_PATH=/app/keypair.json
+      - AGENT_LOG_LEVEL=info
+    volumes:
+      - ./keypairs:/app/keypairs:ro
+
+  dashboard:
+    build:
+      context: ..
+      dockerfile: docker/agent.Dockerfile
+    command: ["pnpm", "--filter", "@conduit/dashboard", "dev"]
+    depends_on:
+      validator:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_SOLANA_RPC_URL=http://validator:8899
+      - NEXT_PUBLIC_SOLANA_NETWORK=localnet
+
+volumes:
+  validator-data:

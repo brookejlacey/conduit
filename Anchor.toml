@@ -1,0 +1,19 @@
+[features]
+seeds = false
+skip-lint = false
+
+[programs.localnet]
+vault = "GdmDuzHbXd2hytSpPyfwnaARSCTnntbTnniAPLr3JRHb"
+agent_registry = "2bm9F6XrH3NoTKUQgSM5uP5edKtGpcau9pHK6QiPUz5v"
+settlement = "7Mm3yQsmkpEeWT5LSpjZn4vucT4n1vcLswG6LCHSZeAe"
+audit_log = "ATyFG3Bc481rrNCWa7pBHvSVgY1tc6nW8mTC2pcm6kqT"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "pnpm --filter tests run test"

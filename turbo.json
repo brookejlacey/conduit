@@ -1,0 +1,35 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalEnv": [
+    "NEXT_PUBLIC_SOLANA_RPC_URL",
+    "NEXT_PUBLIC_SOLANA_NETWORK",
+    "ANTHROPIC_API_KEY",
+    "AGENT_KEYPAIR_PATH",
+    "VAULT_PROGRAM_ID",
+    "AGENT_REGISTRY_PROGRAM_ID",
+    "SETTLEMENT_PROGRAM_ID",
+    "AUDIT_LOG_PROGRAM_ID"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {
+      "dependsOn": ["^build"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"]
+    },
+    "clean": {
+      "cache": false
+    },
+    "test": {
+      "dependsOn": ["^build"]
+    }
+  }
+}
