@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useConnection } from '@solana/wallet-adapter-react';
 import type { SettlementBatch } from '@conduit/sdk';
 import { SETTLEMENT_PROGRAM_ID, decodeSettlementBatch } from '@conduit/sdk';
@@ -18,41 +18,56 @@ export function useSettlements(): UseSettlementsResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const subscriptionRef = useRef<number | null>(null);
+
+  const fetchBatches = useCallback(async (isInitial: boolean) => {
+    try {
+      if (isInitial) setLoading(true);
+      setError(null);
+
+      const accounts = await connection.getProgramAccounts(SETTLEMENT_PROGRAM_ID, {
+        commitment: 'confirmed',
+      });
+
+      const decoded: SettlementBatch[] = [];
+      for (const { account } of accounts) {
+        try {
+          const batch = decodeSettlementBatch(Buffer.from(account.data));
+          decoded.push(batch);
+        } catch {
+          continue;
+        }
+      }
+
+      decoded.sort((a, b) => b.createdAt.toNumber() - a.createdAt.toNumber());
+      setBatches(decoded);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to fetch settlements'));
+    } finally {
+      if (isInitial) setLoading(false);
+    }
+  }, [connection]);
 
   useEffect(() => {
-    async function fetchBatches() {
-      try {
-        setLoading(true);
-        setError(null);
+    fetchBatches(true);
 
-        const accounts = await connection.getProgramAccounts(SETTLEMENT_PROGRAM_ID, {
-          commitment: 'confirmed',
-        });
-
-        const decoded: SettlementBatch[] = [];
-        for (const { account } of accounts) {
-          try {
-            const batch = decodeSettlementBatch(Buffer.from(account.data));
-            decoded.push(batch);
-          } catch {
-            // Skip non-batch accounts (entries, FX rates, config)
-            continue;
-          }
-        }
-
-        // Sort by createdAt descending
-        decoded.sort((a, b) => b.createdAt.toNumber() - a.createdAt.toNumber());
-
-        setBatches(decoded);
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error('Failed to fetch settlements'));
-      } finally {
-        setLoading(false);
-      }
+    try {
+      subscriptionRef.current = connection.onProgramAccountChange(
+        SETTLEMENT_PROGRAM_ID,
+        () => { fetchBatches(false); },
+        'confirmed',
+      );
+    } catch {
+      // WebSocket subscription may not be supported
     }
 
-    fetchBatches();
-  }, [connection, refreshKey]);
+    return () => {
+      if (subscriptionRef.current !== null) {
+        connection.removeProgramAccountChangeListener(subscriptionRef.current);
+        subscriptionRef.current = null;
+      }
+    };
+  }, [connection, refreshKey, fetchBatches]);
 
   return {
     batches,

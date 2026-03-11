@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useConnection } from '@solana/wallet-adapter-react';
 import type { AuditEntry } from '@conduit/sdk';
 import { AUDIT_LOG_PROGRAM_ID, decodeAuditEntry } from '@conduit/sdk';
@@ -18,41 +18,56 @@ export function useAuditLog(): UseAuditLogResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const subscriptionRef = useRef<number | null>(null);
+
+  const fetchAuditLog = useCallback(async (isInitial: boolean) => {
+    try {
+      if (isInitial) setLoading(true);
+      setError(null);
+
+      const accounts = await connection.getProgramAccounts(AUDIT_LOG_PROGRAM_ID, {
+        commitment: 'confirmed',
+      });
+
+      const decoded: AuditEntry[] = [];
+      for (const { account } of accounts) {
+        try {
+          const entry = decodeAuditEntry(Buffer.from(account.data));
+          decoded.push(entry);
+        } catch {
+          continue;
+        }
+      }
+
+      decoded.sort((a, b) => b.timestamp.toNumber() - a.timestamp.toNumber());
+      setEntries(decoded);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Failed to fetch audit log'));
+    } finally {
+      if (isInitial) setLoading(false);
+    }
+  }, [connection]);
 
   useEffect(() => {
-    async function fetchAuditLog() {
-      try {
-        setLoading(true);
-        setError(null);
+    fetchAuditLog(true);
 
-        const accounts = await connection.getProgramAccounts(AUDIT_LOG_PROGRAM_ID, {
-          commitment: 'confirmed',
-        });
-
-        const decoded: AuditEntry[] = [];
-        for (const { account } of accounts) {
-          try {
-            const entry = decodeAuditEntry(Buffer.from(account.data));
-            decoded.push(entry);
-          } catch {
-            // Skip accounts that fail to decode
-            continue;
-          }
-        }
-
-        // Sort by timestamp descending (most recent first)
-        decoded.sort((a, b) => b.timestamp.toNumber() - a.timestamp.toNumber());
-
-        setEntries(decoded);
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error('Failed to fetch audit log'));
-      } finally {
-        setLoading(false);
-      }
+    try {
+      subscriptionRef.current = connection.onProgramAccountChange(
+        AUDIT_LOG_PROGRAM_ID,
+        () => { fetchAuditLog(false); },
+        'confirmed',
+      );
+    } catch {
+      // WebSocket subscription may not be supported
     }
 
-    fetchAuditLog();
-  }, [connection, refreshKey]);
+    return () => {
+      if (subscriptionRef.current !== null) {
+        connection.removeProgramAccountChangeListener(subscriptionRef.current);
+        subscriptionRef.current = null;
+      }
+    };
+  }, [connection, refreshKey, fetchAuditLog]);
 
   return {
     entries,
