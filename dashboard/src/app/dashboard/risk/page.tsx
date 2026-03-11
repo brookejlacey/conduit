@@ -30,7 +30,7 @@ function RiskGauge({ label, score }: { label: string; score: number }) {
 }
 
 export default function RiskPage() {
-  const { vaults, loading } = useVaults();
+  const { vaults, loading, error } = useVaults();
 
   // Compute risk scores from real vault data
   const computeRiskScores = () => {
@@ -92,7 +92,16 @@ export default function RiskPage() {
         </div>
       )}
 
-      {!loading && (
+      {error && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
+          <p className="text-sm text-amber-400">
+            Unable to connect to Solana network. Risk scores unavailable.
+          </p>
+          <p className="mt-1 text-xs text-amber-500/70">{error.message}</p>
+        </div>
+      )}
+
+      {!loading && !error && (
         <>
           {/* Overall Risk Score */}
           <div className="card flex items-center gap-6">
