@@ -1,14 +1,14 @@
 import { AnchorProvider, BN, Wallet } from '@coral-xyz/anchor';
-import { PublicKey, TransactionInstruction, SystemProgram } from '@solana/web3.js';
+import { PublicKey } from '@solana/web3.js';
 import { AgentConfig } from '../config';
 import { ClaudeClient } from '../ai/claude';
 import { MarketService } from './market';
 import { SETTLEMENT_SYSTEM_PROMPT } from '../ai/prompts/settlement';
 import {
-  SETTLEMENT_PROGRAM_ID,
   findSettlementBatchPda,
   findSettlementEntryPda,
 } from '@conduit/sdk';
+import { createBatchIx, createAddEntryIx } from '../chain/instructions';
 import { buildAndSendTransaction } from '../chain/transactions';
 import type { Logger } from 'pino';
 
@@ -70,7 +70,7 @@ export class SettlementService {
 
     const response = await this.claude.analyze(SETTLEMENT_SYSTEM_PROMPT, prompt);
 
-    // Calculate netting — net_offset is now computed on-chain from amount * fx_rate
+    // Calculate netting — net_offset is computed on-chain from amount * fx_rate
     let totalGross = 0;
     let totalNet = 0;
     const entries = pendingPayments.map((p) => {
@@ -105,40 +105,29 @@ export class SettlementService {
     const [batchPda] = findSettlementBatchPda(payer.publicKey, batchId);
 
     try {
-      // 1. Create the batch on-chain
-      const createBatchIx = createSettlementInstruction(
-        'create_batch',
-        {
-          batch: batchPda,
-          creator: payer.publicKey,
-          systemProgram: SystemProgram.programId,
-        },
-        batchId,
-      );
+      // 1. Create the batch on-chain with proper Borsh-encoded instruction
+      const ix = createBatchIx(batchPda, payer.publicKey, batchId);
 
-      const result = await buildAndSendTransaction(connection, payer, [createBatchIx]);
-      this.logger.info({ txSignature: result.signature, batchId: batchId.toString() }, 'Settlement batch created on-chain');
+      const result = await buildAndSendTransaction(connection, payer, [ix]);
+      this.logger.info(
+        { txSignature: result.signature, batchId: batchId.toString() },
+        'Settlement batch created on-chain',
+      );
 
       // 2. Add entries to the batch
       for (let i = 0; i < batch.entries.length; i++) {
         const entry = batch.entries[i];
         const [entryPda] = findSettlementEntryPda(batchPda, i);
 
-        const addEntryIx = createSettlementInstruction(
-          'add_entry',
-          {
-            batch: batchPda,
-            entry: entryPda,
-            fromVault: entry.fromVault,
-            toVault: entry.toVault,
-            creator: payer.publicKey,
-            systemProgram: SystemProgram.programId,
-          },
-          {
-            amountUsx: new BN(entry.amountUsx),
-            destinationCurrency: currencyToBytes(entry.destinationCurrency),
-            fxRate: new BN(entry.fxRate),
-          },
+        const addEntryIx = createAddEntryIx(
+          batchPda,
+          entryPda,
+          entry.fromVault,
+          entry.toVault,
+          payer.publicKey,
+          new BN(entry.amountUsx),
+          currencyToBytes(entry.destinationCurrency),
+          new BN(entry.fxRate),
         );
 
         const entryResult = await buildAndSendTransaction(connection, payer, [addEntryIx]);
@@ -161,27 +150,4 @@ function currencyToBytes(currency: string): number[] {
   const bytes = Buffer.alloc(3, 0);
   Buffer.from(currency.slice(0, 3), 'ascii').copy(bytes);
   return Array.from(bytes);
-}
-
-/**
- * Placeholder for building settlement program instructions.
- * In a full implementation, this would use the Anchor IDL or manual instruction encoding.
- */
-function createSettlementInstruction(
-  _method: string,
-  _accounts: Record<string, PublicKey>,
-  _args: unknown,
-): TransactionInstruction {
-  // This would encode the instruction data using Borsh serialization
-  // matching the Anchor program's expected format.
-  // For now, return a minimal instruction that references the program.
-  return new TransactionInstruction({
-    programId: SETTLEMENT_PROGRAM_ID,
-    keys: Object.entries(_accounts).map(([, pubkey]) => ({
-      pubkey,
-      isSigner: false,
-      isWritable: true,
-    })),
-    data: Buffer.alloc(0), // Would contain Borsh-encoded instruction data
-  });
 }
