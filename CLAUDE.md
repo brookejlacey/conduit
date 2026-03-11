@@ -13,6 +13,11 @@ Monorepo: pnpm workspaces + Turborepo + Anchor workspace
 - `tests/` — Anchor integration tests (Mocha/Chai)
 - `docker/` — Local dev containers (validator, agent, dashboard)
 
+## Deployment
+
+- Dashboard auto-deploys to Vercel on every push to GitHub
+- Repo: https://github.com/brookejlacey/conduit
+
 ## Dev Commands
 
 ```bash
@@ -48,7 +53,7 @@ After `anchor build`, update program IDs in:
 
 ## Conventions
 
-- Solana programs use Anchor 0.30.1
+- Solana programs use Anchor 0.31.1
 - TypeScript strict mode everywhere
 - Dashboard uses App Router (Next.js 15), React 19, Tailwind CSS
 - Agent uses Claude API (@anthropic-ai/sdk) for treasury decisions

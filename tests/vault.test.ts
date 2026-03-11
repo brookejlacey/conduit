@@ -53,12 +53,14 @@ describe('vault', () => {
       program.programId,
     );
 
-    // Create token accounts
+    // Create token accounts (pass keypair to avoid ATA off-curve error for PDA owner)
+    const vaultTokenKeypair = Keypair.generate();
     vaultTokenAccount = await createAccount(
       provider.connection,
       authority,
       usxMint,
       vaultPda,
+      vaultTokenKeypair,
     );
 
     depositorTokenAccount = await createAccount(
@@ -187,6 +189,7 @@ describe('vault', () => {
       authority,
       usxMint,
       authority.publicKey,
+      Keypair.generate(),
     );
 
     await program.methods
@@ -214,6 +217,7 @@ describe('vault', () => {
       authority,
       usxMint,
       authority.publicKey,
+      Keypair.generate(),
     );
 
     try {
@@ -241,6 +245,7 @@ describe('vault', () => {
       authority,
       usxMint,
       authority.publicKey,
+      Keypair.generate(),
     );
     await mintTo(provider.connection, authority, usxMint, yieldSource, authority, 500_000_000);
 
@@ -262,7 +267,7 @@ describe('vault', () => {
     expect(yieldBefore).to.equal(500_000_000);
 
     // Withdraw 200 USX — should come from yield first
-    const dest = await createAccount(provider.connection, authority, usxMint, authority.publicKey);
+    const dest = await createAccount(provider.connection, authority, usxMint, authority.publicKey, Keypair.generate());
     await program.methods
       .withdraw(new anchor.BN(200_000_000), 0, counterparty)
       .accounts({
@@ -286,7 +291,7 @@ describe('vault', () => {
     const depositsBefore = vaultBefore.totalDeposits.toNumber();
 
     // Withdraw 500 USX — 300 from yield, 200 from deposits
-    const dest = await createAccount(provider.connection, authority, usxMint, authority.publicKey);
+    const dest = await createAccount(provider.connection, authority, usxMint, authority.publicKey, Keypair.generate());
     await program.methods
       .withdraw(new anchor.BN(500_000_000), 0, counterparty)
       .accounts({
@@ -312,6 +317,7 @@ describe('vault', () => {
       authority,
       usxMint,
       authority.publicKey,
+      Keypair.generate(),
     );
 
     try {

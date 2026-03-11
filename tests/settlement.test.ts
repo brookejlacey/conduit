@@ -22,16 +22,20 @@ describe('settlement', () => {
   const vaultProgram = anchor.workspace.Vault as Program;
   const creator = Keypair.generate();
   const admin = Keypair.generate();
+  const toVaultAuthority = Keypair.generate();
   const batchId = new anchor.BN(1);
   let batchPda: PublicKey;
   let configPda: PublicKey;
   let usxMint: PublicKey;
   let fromTokenAccount: PublicKey;
   let toTokenAccount: PublicKey;
+  let fromVaultPda: PublicKey;
+  let toVaultPda: PublicKey;
 
   before(async () => {
     await provider.connection.requestAirdrop(creator.publicKey, 10 * LAMPORTS_PER_SOL);
     await provider.connection.requestAirdrop(admin.publicKey, 10 * LAMPORTS_PER_SOL);
+    await provider.connection.requestAirdrop(toVaultAuthority.publicKey, 10 * LAMPORTS_PER_SOL);
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     [batchPda] = PublicKey.findProgramAddressSync(
@@ -44,7 +48,7 @@ describe('settlement', () => {
       program.programId,
     );
 
-    // Create USX mint and accounts for settlement
+    // Create USX mint and token accounts for settlement execution
     usxMint = await createMint(provider.connection, creator, creator.publicKey, null, 6);
 
     fromTokenAccount = await createAccount(
@@ -62,6 +66,68 @@ describe('settlement', () => {
     );
 
     await mintTo(provider.connection, creator, usxMint, fromTokenAccount, creator, 10_000_000_000);
+
+    // Initialize real vault accounts via vault program so they're owned by it
+    [fromVaultPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('vault'), creator.publicKey.toBuffer()],
+      vaultProgram.programId,
+    );
+    [toVaultPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('vault'), toVaultAuthority.publicKey.toBuffer()],
+      vaultProgram.programId,
+    );
+
+    const fromVaultTokenKeypair = Keypair.generate();
+    const fromVaultTokenAccount = await createAccount(
+      provider.connection,
+      creator,
+      usxMint,
+      fromVaultPda,
+      fromVaultTokenKeypair,
+    );
+
+    const toVaultTokenKeypair = Keypair.generate();
+    const toVaultTokenAccount = await createAccount(
+      provider.connection,
+      toVaultAuthority,
+      usxMint,
+      toVaultPda,
+      toVaultTokenKeypair,
+    );
+
+    const counterparty = Keypair.generate().publicKey;
+    const policy = {
+      dailySpendLimit: new anchor.BN(5_000_000_000),
+      maxSingleTxSize: new anchor.BN(1_000_000_000),
+      approvedCounterparties: [counterparty],
+      allowedTxTypes: 0b1111,
+      dailySpent: new anchor.BN(0),
+      lastResetTs: new anchor.BN(0),
+    };
+
+    await vaultProgram.methods
+      .initializeVault(policy, [creator.publicKey], 1, creator.publicKey)
+      .accounts({
+        vault: fromVaultPda,
+        usxTokenAccount: fromVaultTokenAccount,
+        authority: creator.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([creator])
+      .rpc();
+
+    await vaultProgram.methods
+      .initializeVault(policy, [toVaultAuthority.publicKey], 1, toVaultAuthority.publicKey)
+      .accounts({
+        vault: toVaultPda,
+        usxTokenAccount: toVaultTokenAccount,
+        authority: toVaultAuthority.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([toVaultAuthority])
+      .rpc();
   });
 
   it('initializes settlement config', async () => {
@@ -115,15 +181,9 @@ describe('settlement', () => {
       program.programId,
     );
 
-    // Create vault PDAs that are owned by the vault program
-    const [fromVault] = PublicKey.findProgramAddressSync(
-      [Buffer.from('vault'), creator.publicKey.toBuffer()],
-      vaultProgram.programId,
-    );
-    const [toVault] = PublicKey.findProgramAddressSync(
-      [Buffer.from('vault'), admin.publicKey.toBuffer()],
-      vaultProgram.programId,
-    );
+    // Use the vault accounts initialized in before() hook
+    const fromVault = fromVaultPda;
+    const toVault = toVaultPda;
 
     const amount = new anchor.BN(500_000_000); // 500 USX
     const destCurrency = [0x45, 0x55, 0x52]; // "EUR"
