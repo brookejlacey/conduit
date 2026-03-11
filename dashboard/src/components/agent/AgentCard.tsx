@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import type { AgentIdentity } from '@conduit/sdk';
 import { TierBadge } from './TierBadge';
 import { StatusBadge } from '@/components/shared/StatusBadge';
@@ -7,14 +8,15 @@ import { formatDate, shortenAddress } from '@/lib/format';
 
 interface AgentCardProps {
   agent: AgentIdentity;
+  index: number;
 }
 
-export function AgentCard({ agent }: AgentCardProps) {
+export function AgentCard({ agent, index }: AgentCardProps) {
   const lastAction = agent.lastActionAt.toNumber() * 1000;
   const registeredAt = agent.registeredAt.toNumber() * 1000;
 
   return (
-    <div className="card-hover">
+    <Link href={`/dashboard/agents/${index}`} className="card-hover block">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-conduit-navy-700">
@@ -62,6 +64,6 @@ export function AgentCard({ agent }: AgentCardProps) {
           Deactivate (Kill Switch)
         </button>
       )}
-    </div>
+    </Link>
   );
 }

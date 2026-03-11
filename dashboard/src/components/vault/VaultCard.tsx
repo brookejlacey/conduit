@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import type { VaultAccount } from '@conduit/sdk';
 import { formatUsx, shortenAddress } from '@/lib/format';
 
@@ -30,7 +31,7 @@ export function VaultCard({ vault, index }: VaultCardProps) {
   if (vault.policy.allowedTxTypes & 0b1000) txTypes.push('Rebalance');
 
   return (
-    <div className="card-hover">
+    <Link href={`/dashboard/vaults/${index}`} className="card-hover block">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-lg font-semibold text-conduit-navy-100">Vault #{index + 1}</h3>
         <span className="rounded-full bg-conduit-blue-600/20 px-3 py-1 text-xs font-medium text-conduit-blue-400">
@@ -88,6 +89,6 @@ export function VaultCard({ vault, index }: VaultCardProps) {
           </p>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

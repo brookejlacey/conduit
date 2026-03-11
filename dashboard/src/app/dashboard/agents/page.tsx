@@ -49,7 +49,7 @@ export default function AgentsPage() {
       {!loading && agents.length > 0 && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
           {agents.map((agent, i) => (
-            <AgentCard key={i} agent={agent} />
+            <AgentCard key={i} agent={agent} index={i} />
           ))}
         </div>
       )}

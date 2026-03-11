@@ -1,6 +1,6 @@
 'use client';
 
-import { DataTable } from '@/components/shared/DataTable';
+import Link from 'next/link';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { formatUsx, formatDate, shortenAddress } from '@/lib/format';
 import { useSettlements } from '@/hooks/useSettlements';
@@ -108,7 +108,36 @@ export default function SettlementsPage() {
 
       {!loading && batches.length > 0 && (
         <div className="card overflow-hidden p-0">
-          <DataTable columns={columns} data={batches} />
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-conduit-navy-700 bg-conduit-navy-900">
+                  {columns.map((col, i) => (
+                    <th key={i} className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-conduit-navy-400">
+                      {col.header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-conduit-navy-700">
+                {batches.map((row, rowIndex) => (
+                  <tr key={rowIndex} className="cursor-pointer transition-colors hover:bg-conduit-navy-800/50">
+                    {columns.map((col, colIndex) => (
+                      <td key={colIndex} className="whitespace-nowrap px-6 py-4 text-sm text-conduit-navy-200">
+                        {colIndex === 0 ? (
+                          <Link href={`/dashboard/settlements/${rowIndex}`} className="text-conduit-blue-400 hover:underline">
+                            {col.accessor(row)}
+                          </Link>
+                        ) : (
+                          col.accessor(row)
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

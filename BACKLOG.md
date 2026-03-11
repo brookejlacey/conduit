@@ -14,9 +14,9 @@ Status: `[ ]` todo · `[x]` done
 
 ## P1 — Dashboard Polish
 
-- [ ] **Vault detail page** — Click a vault to see deposit history, policy config, yield timeline
-- [ ] **Agent detail page** — Click an agent to see decision timeline with expandable AI reasoning
-- [ ] **Settlement batch detail** — Click a batch to see entries, FX rates, netting efficiency
+- [x] **Vault detail page** — Click a vault to see deposit history, policy config, yield timeline
+- [x] **Agent detail page** — Click an agent to see decision timeline with expandable AI reasoning
+- [x] **Settlement batch detail** — Click a batch to see entries, FX rates, netting efficiency
 - [ ] **Real-time updates** — WebSocket subscriptions for vault changes and new audit entries
 - [ ] **Responsive layout** — Mobile-friendly sidebar (collapse to icons on small screens)
 - [ ] **Loading skeletons** — Replace spinners with skeleton loaders for better perceived performance
