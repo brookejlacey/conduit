@@ -1,6 +1,7 @@
 'use client';
 
 import { AgentCard } from '@/components/agent/AgentCard';
+import { CardSkeleton } from '@/components/shared/Skeleton';
 import { useAgents } from '@/hooks/useAgents';
 
 export default function AgentsPage() {
@@ -22,9 +23,10 @@ export default function AgentsPage() {
       </div>
 
       {loading && (
-        <div className="flex items-center justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-conduit-blue-400 border-t-transparent" />
-          <span className="ml-3 text-conduit-navy-300">Loading agents...</span>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
         </div>
       )}
 

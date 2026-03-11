@@ -18,7 +18,8 @@ test.describe('Dashboard Navigation', () => {
 
   test('sidebar navigation links are visible', async ({ page }) => {
     await page.goto('/dashboard');
-    const sidebar = page.locator('aside');
+    // Use the visible desktop sidebar (hidden mobile sidebar also exists)
+    const sidebar = page.locator('aside').last();
     await expect(sidebar.locator('text=Conduit')).toBeVisible();
     await expect(sidebar.locator('text=Overview')).toBeVisible();
     await expect(sidebar.locator('text=Vaults')).toBeVisible();
@@ -30,35 +31,35 @@ test.describe('Dashboard Navigation', () => {
 
   test('navigate to agents page', async ({ page }) => {
     await page.goto('/dashboard');
-    await page.click('aside >> text=Agents');
+    await page.locator('aside').last().locator('text=Agents').click();
     await expect(page).toHaveURL('/dashboard/agents');
     await expect(page.locator('h1')).toHaveText('Agents');
   });
 
   test('navigate to vaults page', async ({ page }) => {
     await page.goto('/dashboard');
-    await page.click('aside >> text=Vaults');
+    await page.locator('aside').last().locator('text=Vaults').click();
     await expect(page).toHaveURL('/dashboard/vaults');
     await expect(page.locator('h1')).toHaveText('Vaults');
   });
 
   test('navigate to settlements page', async ({ page }) => {
     await page.goto('/dashboard');
-    await page.click('aside >> text=Settlements');
+    await page.locator('aside').last().locator('text=Settlements').click();
     await expect(page).toHaveURL('/dashboard/settlements');
     await expect(page.locator('h1')).toHaveText('Settlements');
   });
 
   test('navigate to audit log page', async ({ page }) => {
     await page.goto('/dashboard');
-    await page.click('aside >> text=Audit Log');
+    await page.locator('aside').last().locator('text=Audit Log').click();
     await expect(page).toHaveURL('/dashboard/audit');
     await expect(page.locator('h1')).toHaveText('Audit Log');
   });
 
   test('navigate to risk page', async ({ page }) => {
     await page.goto('/dashboard');
-    await page.click('aside >> text=Risk');
+    await page.locator('aside').last().locator('text=Risk').click();
     await expect(page).toHaveURL('/dashboard/risk');
     await expect(page.locator('h1')).toHaveText('Risk Dashboard');
   });
@@ -67,12 +68,12 @@ test.describe('Dashboard Navigation', () => {
 test.describe('Agents Page', () => {
   test('shows loading state then resolves', async ({ page }) => {
     await page.goto('/dashboard/agents');
-    // Should show either loading spinner, error message, or empty state — not crash
+    // Should show either skeleton loading, error message, or empty state — not crash
     const content = page.locator('main');
     await expect(content).toBeVisible();
     // Wait for loading to finish (either error or empty state appears)
     await expect(
-      page.locator('text=Loading agents...').or(page.locator('text=Failed to load')).or(page.locator('text=No agents found'))
+      page.locator('text=Failed to load').or(page.locator('text=No agents found'))
     ).toBeVisible({ timeout: 15000 });
   });
 
@@ -93,7 +94,7 @@ test.describe('Vaults Page', () => {
     await expect(page.locator('h1')).toHaveText('Vaults');
     // Wait for data to resolve
     await expect(
-      page.locator('text=Loading vaults...').or(page.locator('text=Failed to load')).or(page.locator('text=No vaults found'))
+      page.locator('text=Failed to load').or(page.locator('text=No vaults found'))
     ).toBeVisible({ timeout: 15000 });
   });
 });
@@ -103,7 +104,7 @@ test.describe('Settlements Page', () => {
     await page.goto('/dashboard/settlements');
     await expect(page.locator('h1')).toHaveText('Settlements');
     await expect(
-      page.locator('text=Loading').or(page.locator('text=Failed')).or(page.locator('text=No settlement'))
+      page.locator('text=Failed').or(page.locator('text=No settlement'))
     ).toBeVisible({ timeout: 15000 });
   });
 });
@@ -113,7 +114,7 @@ test.describe('Audit Log Page', () => {
     await page.goto('/dashboard/audit');
     await expect(page.locator('h1')).toHaveText('Audit Log');
     await expect(
-      page.locator('text=Loading').or(page.locator('text=Failed')).or(page.locator('text=No audit'))
+      page.locator('text=Failed').or(page.locator('text=No audit'))
     ).toBeVisible({ timeout: 15000 });
   });
 });
@@ -121,12 +122,12 @@ test.describe('Audit Log Page', () => {
 test.describe('Wallet Connection', () => {
   test('wallet button is visible in sidebar', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.locator('text=Connect Wallet')).toBeVisible();
+    await expect(page.locator('aside').last().locator('text=Connect Wallet')).toBeVisible();
   });
 
   test('wallet button click opens modal', async ({ page }) => {
     await page.goto('/dashboard');
-    await page.click('text=Connect Wallet');
+    await page.locator('aside').last().locator('text=Connect Wallet').click();
     // The wallet modal should appear (from @solana/wallet-adapter-react-ui)
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
   });

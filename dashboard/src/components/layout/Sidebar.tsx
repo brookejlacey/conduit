@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { WalletButton } from './WalletButton';
@@ -15,20 +16,32 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  return (
-    <aside className="flex w-64 flex-col border-r border-conduit-navy-700 bg-conduit-navy-950">
+  const sidebarContent = (
+    <>
       {/* Logo */}
-      <div className="flex h-16 items-center gap-3 border-b border-conduit-navy-700 px-6">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-conduit-blue-600">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10" strokeLinecap="round" />
-            <path d="M12 2c3.04 0 5.5 4.48 5.5 10" strokeLinecap="round" />
-            <path d="M2 12h10" strokeLinecap="round" />
-            <path d="M17 17l4 4M17 21l4-4" strokeLinecap="round" />
-          </svg>
+      <div className="flex h-16 items-center justify-between border-b border-conduit-navy-700 px-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-conduit-blue-600">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10" strokeLinecap="round" />
+              <path d="M12 2c3.04 0 5.5 4.48 5.5 10" strokeLinecap="round" />
+              <path d="M2 12h10" strokeLinecap="round" />
+              <path d="M17 17l4 4M17 21l4-4" strokeLinecap="round" />
+            </svg>
+          </div>
+          <span className="text-lg font-bold text-conduit-navy-50">Conduit</span>
         </div>
-        <span className="text-lg font-bold text-conduit-navy-50">Conduit</span>
+        {/* Close button on mobile */}
+        <button
+          onClick={() => setMobileOpen(false)}
+          className="text-conduit-navy-400 hover:text-conduit-navy-200 md:hidden"
+        >
+          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
 
       {/* Navigation */}
@@ -39,6 +52,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => setMobileOpen(false)}
               className={isActive ? 'sidebar-link-active' : 'sidebar-link'}
             >
               <svg
@@ -60,6 +74,42 @@ export function Sidebar() {
       <div className="border-t border-conduit-navy-700 p-4">
         <WalletButton />
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile hamburger button */}
+      <button
+        onClick={() => setMobileOpen(true)}
+        className="fixed left-4 top-4 z-40 rounded-lg border border-conduit-navy-700 bg-conduit-navy-900 p-2 text-conduit-navy-300 hover:bg-conduit-navy-800 md:hidden"
+      >
+        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Mobile sidebar */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-conduit-navy-700 bg-conduit-navy-950 transition-transform md:hidden ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {sidebarContent}
+      </aside>
+
+      {/* Desktop sidebar */}
+      <aside className="hidden w-64 flex-col border-r border-conduit-navy-700 bg-conduit-navy-950 md:flex">
+        {sidebarContent}
+      </aside>
+    </>
   );
 }

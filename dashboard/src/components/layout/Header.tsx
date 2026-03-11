@@ -1,6 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import { getNetwork } from '@/lib/solana';
 
 const breadcrumbMap: Record<string, string> = {
   '/dashboard': 'Overview',
@@ -13,12 +14,13 @@ const breadcrumbMap: Record<string, string> = {
 
 export function Header() {
   const pathname = usePathname();
-  const pageTitle = breadcrumbMap[pathname] || 'Dashboard';
-
   const breadcrumbs = pathname.split('/').filter(Boolean);
+  const network = getNetwork();
+  const networkLabel = network.charAt(0).toUpperCase() + network.slice(1);
+  const networkColor = network === 'mainnet-beta' ? 'bg-conduit-emerald-400' : 'bg-conduit-amber-400';
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-conduit-navy-700 bg-conduit-navy-950 px-6">
+    <header className="flex h-16 items-center justify-between border-b border-conduit-navy-700 bg-conduit-navy-950 px-6 pl-16 md:pl-6">
       <div className="flex items-center gap-2 text-sm">
         {breadcrumbs.map((segment, i) => (
           <span key={i} className="flex items-center gap-2">
@@ -37,8 +39,8 @@ export function Header() {
       </div>
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-conduit-emerald-400" />
-          <span className="text-xs text-conduit-navy-300">Localnet</span>
+          <div className={`h-2 w-2 rounded-full ${networkColor}`} />
+          <span className="text-xs text-conduit-navy-300">{networkLabel}</span>
         </div>
       </div>
     </header>

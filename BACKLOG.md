@@ -18,8 +18,8 @@ Status: `[ ]` todo · `[x]` done
 - [x] **Agent detail page** — Click an agent to see decision timeline with expandable AI reasoning
 - [x] **Settlement batch detail** — Click a batch to see entries, FX rates, netting efficiency
 - [ ] **Real-time updates** — WebSocket subscriptions for vault changes and new audit entries
-- [ ] **Responsive layout** — Mobile-friendly sidebar (collapse to icons on small screens)
-- [ ] **Loading skeletons** — Replace spinners with skeleton loaders for better perceived performance
+- [x] **Responsive layout** — Mobile-friendly sidebar (collapse to icons on small screens)
+- [x] **Loading skeletons** — Replace spinners with skeleton loaders for better perceived performance
 
 ## P2 — Agent Service
 

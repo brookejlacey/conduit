@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { DecisionTimeline } from '@/components/agent/DecisionTimeline';
+import { Skeleton } from '@/components/shared/Skeleton';
 import { useAuditLog } from '@/hooks/useAuditLog';
 import { shortenAddress, formatUsx } from '@/lib/format';
 import { ActionType } from '@conduit/sdk';
@@ -64,9 +65,16 @@ export default function AuditPage() {
       </div>
 
       {loading && (
-        <div className="flex items-center justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-conduit-blue-400 border-t-transparent" />
-          <span className="ml-3 text-conduit-navy-300">Loading audit log...</span>
+        <div className="space-y-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="card space-y-3">
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+              <Skeleton className="h-3 w-48" />
+            </div>
+          ))}
         </div>
       )}
 

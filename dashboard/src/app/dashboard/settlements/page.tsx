@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import { TableRowSkeleton } from '@/components/shared/Skeleton';
 import { formatUsx, formatDate, shortenAddress } from '@/lib/format';
 import { useSettlements } from '@/hooks/useSettlements';
 import { SettlementStatus } from '@conduit/sdk';
@@ -82,9 +83,23 @@ export default function SettlementsPage() {
       </div>
 
       {loading && (
-        <div className="flex items-center justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-conduit-blue-400 border-t-transparent" />
-          <span className="ml-3 text-conduit-navy-300">Loading settlements...</span>
+        <div className="card overflow-hidden p-0">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-conduit-navy-700 bg-conduit-navy-900">
+                {columns.map((col, i) => (
+                  <th key={i} className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-conduit-navy-400">
+                    {col.header}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <TableRowSkeleton cols={columns.length} />
+              <TableRowSkeleton cols={columns.length} />
+              <TableRowSkeleton cols={columns.length} />
+            </tbody>
+          </table>
         </div>
       )}
 
