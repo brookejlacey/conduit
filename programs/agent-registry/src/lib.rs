@@ -35,4 +35,8 @@ pub mod agent_registry {
     pub fn deactivate_agent(ctx: Context<DeactivateAgent>) -> Result<()> {
         instructions::deactivate_agent::handler(ctx)
     }
+
+    pub fn reactivate_agent(ctx: Context<ReactivateAgent>) -> Result<()> {
+        instructions::reactivate_agent::handler(ctx)
+    }
 }

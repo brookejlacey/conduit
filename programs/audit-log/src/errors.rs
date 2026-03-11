@@ -7,4 +7,7 @@ pub enum AuditError {
 
     #[msg("Unauthorized: agent not registered")]
     Unauthorized,
+
+    #[msg("Agent is not active")]
+    AgentInactive,
 }

@@ -25,4 +25,7 @@ pub enum RegistryError {
 
     #[msg("Arithmetic overflow")]
     Overflow,
+
+    #[msg("Agent is already active")]
+    AgentAlreadyActive,
 }

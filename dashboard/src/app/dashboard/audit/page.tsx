@@ -1,72 +1,96 @@
 'use client';
 
+import { useState } from 'react';
 import { DecisionTimeline } from '@/components/agent/DecisionTimeline';
-import { formatDate, shortenAddress } from '@/lib/format';
+import { useAuditLog } from '@/hooks/useAuditLog';
+import { shortenAddress, formatUsx } from '@/lib/format';
+import { ActionType } from '@conduit/sdk';
 
-const mockAuditEntries = [
-  {
-    id: '1',
-    agent: '7xKnR4pQ9...3fPq',
-    actionType: 'Settlement',
-    targetVault: '4vMk...8nWp',
-    amount: 780_000_000_000,
-    reasoning:
-      'Analyzed 8 pending cross-border payments. Identified 37.6% netting opportunity between EUR and GBP corridors. FX volatility is low (0.06 for USD/EUR), making this an optimal settlement window. Executed net settlement of 780K USX.',
-    timestamp: Date.now() - 300_000,
-    slot: 285_432_100,
-  },
-  {
-    id: '2',
-    agent: '7xKnR4pQ9...3fPq',
-    actionType: 'Rebalance',
-    targetVault: '9qLm...2dRt',
-    amount: 250_000_000_000,
-    reasoning:
-      'Vault #2 daily utilization at 81.7%, approaching the 80% warning threshold. Vault #1 has 30% utilization with sufficient reserves. Recommending 250K USX transfer from Vault #1 to Vault #2 to normalize utilization across the portfolio.',
-    timestamp: Date.now() - 900_000,
-    slot: 285_431_800,
-  },
-  {
-    id: '3',
-    agent: 'System',
-    actionType: 'Compliance',
-    targetVault: '9qLm...2dRt',
-    amount: null,
-    reasoning:
-      'Automated compliance scan detected daily spend utilization at 85% for Vault #3. No policy violations found. Recommend monitoring and potential limit increase review.',
-    timestamp: Date.now() - 1_800_000,
-    slot: 285_431_500,
-  },
-  {
-    id: '4',
-    agent: '7xKnR4pQ9...3fPq',
-    actionType: 'Yield Accrual',
-    targetVault: '4vMk...8nWp',
-    amount: 12_500_000_000,
-    reasoning:
-      'Periodic yield accrual for lending position. Current APY: 4.5%. Accrued 12.5K USX yield from USX lending pool over the past 24 hours. Total yield to date: 125K USX.',
-    timestamp: Date.now() - 3_600_000,
-    slot: 285_430_900,
-  },
-];
+const ACTION_LABELS: Record<number, string> = {
+  [ActionType.Deposit]: 'Deposit',
+  [ActionType.Withdraw]: 'Withdraw',
+  [ActionType.Rebalance]: 'Rebalance',
+  [ActionType.Settlement]: 'Settlement',
+  [ActionType.PolicyUpdate]: 'Policy Update',
+  [ActionType.YieldAccrual]: 'Yield Accrual',
+};
 
 export default function AuditPage() {
+  const { entries, loading, error, refresh } = useAuditLog();
+  const [filter, setFilter] = useState<string>('all');
+
+  const filteredEntries = entries.filter((e) => {
+    if (filter === 'all') return true;
+    return ACTION_LABELS[e.actionType] === filter;
+  });
+
+  // Map on-chain AuditEntry to the DecisionTimeline format
+  const timelineEntries = filteredEntries.map((entry, i) => ({
+    id: String(i),
+    agent: shortenAddress(entry.agent.toBase58()),
+    actionType: ACTION_LABELS[entry.actionType] ?? `Action ${entry.actionType}`,
+    targetVault: entry.targetVault ? shortenAddress(entry.targetVault.toBase58()) : null,
+    amount: entry.amount ? Number(entry.amount.toString()) : null,
+    reasoning: `Reasoning hash: ${Buffer.from(entry.reasoningHash).toString('hex').slice(0, 16)}...`,
+    timestamp: entry.timestamp.toNumber() * 1000,
+    slot: entry.slot.toNumber(),
+  }));
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-conduit-navy-50">Audit Log</h1>
         <div className="flex gap-2">
-          <select className="btn-secondary">
-            <option>All Actions</option>
-            <option>Settlements</option>
-            <option>Rebalances</option>
-            <option>Compliance</option>
-            <option>Deposits</option>
-            <option>Withdrawals</option>
+          <select
+            className="btn-secondary"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          >
+            <option value="all">All Actions</option>
+            <option value="Settlement">Settlements</option>
+            <option value="Rebalance">Rebalances</option>
+            <option value="Deposit">Deposits</option>
+            <option value="Withdraw">Withdrawals</option>
+            <option value="Yield Accrual">Yield Accrual</option>
+            <option value="Policy Update">Policy Updates</option>
           </select>
+          <button
+            onClick={refresh}
+            className="rounded-lg border border-conduit-navy-600 bg-conduit-navy-800 px-4 py-2 text-sm text-conduit-navy-200 transition hover:bg-conduit-navy-700"
+          >
+            Refresh
+          </button>
         </div>
       </div>
-      <DecisionTimeline entries={mockAuditEntries} />
+
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-conduit-blue-400 border-t-transparent" />
+          <span className="ml-3 text-conduit-navy-300">Loading audit log...</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-4">
+          <p className="text-sm text-red-400">Failed to load audit log: {error.message}</p>
+          <button onClick={refresh} className="mt-2 text-xs text-red-300 underline hover:text-red-200">
+            Retry
+          </button>
+        </div>
+      )}
+
+      {!loading && !error && timelineEntries.length === 0 && (
+        <div className="rounded-lg border border-conduit-navy-700 bg-conduit-navy-800/50 p-8 text-center">
+          <p className="text-conduit-navy-400">No audit entries found.</p>
+          <p className="mt-1 text-xs text-conduit-navy-500">
+            Audit entries are created when agents perform on-chain actions.
+          </p>
+        </div>
+      )}
+
+      {!loading && timelineEntries.length > 0 && (
+        <DecisionTimeline entries={timelineEntries} />
+      )}
     </div>
   );
 }

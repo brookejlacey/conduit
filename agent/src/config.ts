@@ -39,6 +39,7 @@ export interface AgentConfig {
   institution: {
     name: string;
     kycHash: string;
+    adminPubkey: string;
   };
 }
 
@@ -78,6 +79,7 @@ export function loadConfig(): AgentConfig {
         'INSTITUTION_KYC_HASH',
         '0000000000000000000000000000000000000000000000000000000000000000',
       ),
+      adminPubkey: optionalEnv('INSTITUTION_ADMIN_PUBKEY', ''),
     },
   };
 }

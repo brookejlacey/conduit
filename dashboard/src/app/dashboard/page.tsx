@@ -3,50 +3,35 @@
 import { MetricCard } from '@/components/shared/MetricCard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { formatUsx, formatDate, shortenAddress } from '@/lib/format';
+import { useVaults } from '@/hooks/useVaults';
+import { useAgents } from '@/hooks/useAgents';
+import { useAuditLog } from '@/hooks/useAuditLog';
+import { ActionType } from '@conduit/sdk';
 
-const mockMetrics = {
-  totalAum: 12_500_000_000_000, // 12.5M USX in lamports
-  activeAgents: 3,
-  pendingSettlements: 7,
-  complianceRate: 99.2,
+const ACTION_LABELS: Record<number, string> = {
+  [ActionType.Deposit]: 'Deposit',
+  [ActionType.Withdraw]: 'Withdraw',
+  [ActionType.Rebalance]: 'Rebalance',
+  [ActionType.Settlement]: 'Settlement',
+  [ActionType.PolicyUpdate]: 'Policy Update',
+  [ActionType.YieldAccrual]: 'Yield Accrual',
 };
 
-const mockActivity = [
-  {
-    id: '1',
-    type: 'settlement',
-    description: 'Settlement batch #142 executed',
-    agent: '7xKn...3fPq',
-    timestamp: Date.now() - 300_000,
-    status: 'success' as const,
-  },
-  {
-    id: '2',
-    type: 'rebalance',
-    description: 'Vault rebalance: 250K USX moved',
-    agent: '7xKn...3fPq',
-    timestamp: Date.now() - 900_000,
-    status: 'success' as const,
-  },
-  {
-    id: '3',
-    type: 'compliance',
-    description: 'Daily limit warning on Vault #3',
-    agent: 'System',
-    timestamp: Date.now() - 1_800_000,
-    status: 'warning' as const,
-  },
-  {
-    id: '4',
-    type: 'deposit',
-    description: 'New deposit: 1.2M USX',
-    agent: 'External',
-    timestamp: Date.now() - 3_600_000,
-    status: 'success' as const,
-  },
-];
-
 export default function DashboardOverview() {
+  const { vaults, loading: vaultsLoading } = useVaults();
+  const { agents, loading: agentsLoading } = useAgents();
+  const { entries: auditEntries, loading: auditLoading } = useAuditLog();
+
+  const loading = vaultsLoading || agentsLoading || auditLoading;
+
+  // Compute real metrics from on-chain data
+  const totalAum = vaults.reduce(
+    (sum, v) => sum + Number(v.totalDeposits.toString()) + Number(v.yieldAccrued.toString()),
+    0,
+  );
+  const activeAgents = agents.filter((a) => a.active).length;
+  const recentActivity = auditEntries.slice(0, 10);
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-conduit-navy-50">Overview</h1>
@@ -55,30 +40,30 @@ export default function DashboardOverview() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title="Total AUM"
-          value={formatUsx(mockMetrics.totalAum)}
-          change="+2.4%"
-          changeType="positive"
+          value={loading ? '...' : formatUsx(totalAum)}
+          change=""
+          changeType="neutral"
           icon="vault"
         />
         <MetricCard
           title="Active Agents"
-          value={String(mockMetrics.activeAgents)}
-          change="0"
+          value={loading ? '...' : String(activeAgents)}
+          change={loading ? '' : `${agents.length} total`}
           changeType="neutral"
           icon="agent"
         />
         <MetricCard
-          title="Pending Settlements"
-          value={String(mockMetrics.pendingSettlements)}
-          change="-3"
-          changeType="positive"
+          title="Vaults"
+          value={loading ? '...' : String(vaults.length)}
+          change=""
+          changeType="neutral"
           icon="settlement"
         />
         <MetricCard
-          title="Compliance Rate"
-          value={`${mockMetrics.complianceRate}%`}
-          change="+0.1%"
-          changeType="positive"
+          title="Audit Entries"
+          value={loading ? '...' : String(auditEntries.length)}
+          change=""
+          changeType="neutral"
           icon="compliance"
         />
       </div>
@@ -86,29 +71,56 @@ export default function DashboardOverview() {
       {/* Recent Activity */}
       <div className="card">
         <h2 className="mb-4 text-lg font-semibold text-conduit-navy-100">Recent Activity</h2>
-        <div className="space-y-3">
-          {mockActivity.map((activity) => (
-            <div
-              key={activity.id}
-              className="flex items-center justify-between rounded-lg border border-conduit-navy-700 bg-conduit-navy-900 p-4"
-            >
-              <div className="flex items-center gap-4">
-                <StatusBadge status={activity.status} />
-                <div>
-                  <p className="text-sm font-medium text-conduit-navy-100">
-                    {activity.description}
-                  </p>
-                  <p className="text-xs text-conduit-navy-400">
-                    Agent: {activity.agent}
-                  </p>
+
+        {loading && (
+          <div className="flex items-center justify-center py-8">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-conduit-blue-400 border-t-transparent" />
+            <span className="ml-3 text-sm text-conduit-navy-400">Loading on-chain data...</span>
+          </div>
+        )}
+
+        {!loading && recentActivity.length === 0 && (
+          <p className="py-4 text-center text-sm text-conduit-navy-400">
+            No on-chain activity found. Deploy programs and start the agent to see data here.
+          </p>
+        )}
+
+        {!loading && recentActivity.length > 0 && (
+          <div className="space-y-3">
+            {recentActivity.map((entry, i) => {
+              const actionLabel = ACTION_LABELS[entry.actionType] ?? `Action ${entry.actionType}`;
+              const amount = entry.amount ? Number(entry.amount.toString()) : null;
+              const description = amount
+                ? `${actionLabel}: ${formatUsx(amount)}`
+                : actionLabel;
+
+              return (
+                <div
+                  key={i}
+                  className="flex items-center justify-between rounded-lg border border-conduit-navy-700 bg-conduit-navy-900 p-4"
+                >
+                  <div className="flex items-center gap-4">
+                    <StatusBadge status="success" />
+                    <div>
+                      <p className="text-sm font-medium text-conduit-navy-100">
+                        {description}
+                      </p>
+                      <p className="text-xs text-conduit-navy-400">
+                        Agent: {shortenAddress(entry.agent.toBase58())}
+                        {entry.targetVault && (
+                          <> | Vault: {shortenAddress(entry.targetVault.toBase58())}</>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs text-conduit-navy-400">
+                    {formatDate(entry.timestamp.toNumber() * 1000)}
+                  </span>
                 </div>
-              </div>
-              <span className="text-xs text-conduit-navy-400">
-                {formatDate(activity.timestamp)}
-              </span>
-            </div>
-          ))}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

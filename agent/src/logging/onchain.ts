@@ -46,7 +46,9 @@ export class OnChainLogger {
 
       // Derive the agent's institution PDA and agent identity PDA
       // These are needed for the cross-program verification in the audit-log program
-      const institutionAdmin = new PublicKey(this.config.institution.kycHash.slice(0, 32) || payer.publicKey.toBase58());
+      const institutionAdmin = this.config.institution.adminPubkey
+        ? new PublicKey(this.config.institution.adminPubkey)
+        : payer.publicKey;
       const [institutionPda] = findInstitutionPda(institutionAdmin);
       const [agentIdentityPda] = findAgentPda(institutionPda, payer.publicKey);
 

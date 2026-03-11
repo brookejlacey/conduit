@@ -74,14 +74,19 @@ pub fn handler(
         AuditError::Unauthorized
     );
 
-    // Verify the agent is active (byte offset: 8 discriminator + 32 institution + 32 agent_pubkey + 1 tier + 4+N*32 scoped_programs)
-    // For simplicity, verify the account has data (is initialized) — a deactivated agent's
-    // account would still exist but the `active` field would be false.
-    // Full deserialization would require importing the agent-registry types.
-    require!(
-        ctx.accounts.agent_identity.data_len() > 0,
-        AuditError::Unauthorized
-    );
+    // Verify the agent is active by reading the `active` field from raw account data.
+    // AgentIdentity layout: 8 (discriminator) + 32 (institution) + 32 (agent_pubkey)
+    //   + 1 (authority_tier) + 4 (vec len) + N*32 (scoped_programs) + 1 (active)
+    let identity_data = ctx.accounts.agent_identity.try_borrow_data()?;
+    let min_len = 8 + 32 + 32 + 1 + 4; // 77 bytes before the vec contents
+    require!(identity_data.len() >= min_len, AuditError::Unauthorized);
+    let num_programs = u32::from_le_bytes(
+        identity_data[73..77].try_into().unwrap()
+    ) as usize;
+    let active_offset = 77 + (num_programs * 32);
+    require!(identity_data.len() > active_offset, AuditError::Unauthorized);
+    let is_active = identity_data[active_offset] != 0;
+    require!(is_active, AuditError::AgentInactive);
 
     let clock = Clock::get()?;
     let entry = &mut ctx.accounts.audit_entry;

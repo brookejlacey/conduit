@@ -65,11 +65,29 @@ pub fn handler(
         VaultError::DailyLimitExceeded
     );
 
-    // Update vault totals
-    vault.total_deposits = vault
+    // Available balance includes both deposits and accrued yield
+    let available_balance = vault
         .total_deposits
-        .checked_sub(amount)
-        .ok_or(VaultError::InsufficientFunds)?;
+        .checked_add(vault.yield_accrued)
+        .ok_or(VaultError::Overflow)?;
+    require!(amount <= available_balance, VaultError::InsufficientFunds);
+
+    // Deduct from yield first, then deposits
+    if amount <= vault.yield_accrued {
+        vault.yield_accrued = vault
+            .yield_accrued
+            .checked_sub(amount)
+            .ok_or(VaultError::Overflow)?;
+    } else {
+        let remaining = amount
+            .checked_sub(vault.yield_accrued)
+            .ok_or(VaultError::Overflow)?;
+        vault.yield_accrued = 0;
+        vault.total_deposits = vault
+            .total_deposits
+            .checked_sub(remaining)
+            .ok_or(VaultError::InsufficientFunds)?;
+    }
 
     // Transfer USX from vault to destination using PDA signer seeds
     let authority_key = vault.authority;
