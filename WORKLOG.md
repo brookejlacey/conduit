@@ -4,23 +4,27 @@
 
 ---
 
-## Current Session (2026-03-11)
+## Current Session (2026-03-11, continued)
 
 ### What shipped
-- **fix: RPC connection refused** — Dashboard defaulted to `localnet` (127.0.0.1:8899). Changed default network to `devnet` in `dashboard/src/lib/solana.ts`
-- **fix: wallet connect button** — Rewrote WalletButton to use `useWalletModal` from wallet-adapter-react-ui. Now opens proper wallet picker with Phantom/Solflare. Added loading states and error handling.
-- **fix: wallet adapter bundle bloat** — Replaced `@solana/wallet-adapter-wallets` mega-package (caused build failures from tslib/uuid/etc) with direct `@solana/wallet-adapter-phantom` + `@solana/wallet-adapter-solflare` imports
-- **fix: overview error handling** — Added amber error banner when RPC connection fails instead of infinite loading spinner
-- **setup: Playwright e2e tests** — 17 tests covering navigation, page loads, wallet modal, error states. All passing.
-- **setup: workflow docs** — Created BACKLOG.md (prioritized), WORKLOG.md, DECISIONS.md. Updated CLAUDE.md with session protocol and Loop.
-- **Investor pitch** — Created Notion page with full technical depth (Rust schemas, PDA seeds, instruction sets). Published at brookejlacey.notion.site/conduit
+- **Vault detail page** — `/dashboard/vaults/[index]` with full policy config, addresses, counterparties, activity log
+- **Agent detail page** — `/dashboard/agents/[index]` with identity, scoped programs, decision timeline
+- **Settlement batch detail** — `/dashboard/settlements/[index]` with netting breakdown, timeline, metrics
+- **Clickable cards/rows** — All list pages now link to detail views
+- **Responsive sidebar** — Mobile hamburger menu with slide-out overlay, close on nav
+- **Loading skeletons** — Replaced all spinners with skeleton loaders (cards, table rows, timeline)
+- **Header network display** — Shows actual network (devnet/localnet) instead of hardcoded "Localnet"
+- **WebSocket subscriptions** — All 4 hooks use `onProgramAccountChange` for real-time updates
+- **Updated e2e tests** — All 17 tests passing with dual-sidebar DOM
 
 ### What's next
-- **P0: Deploy programs to devnet** — Dashboard needs live data
-- **P0: Seed demo data** — Institution, agent, vault, deposits, audit entries on devnet
-- **P0: Dashboard error states** — Verify all pages handle empty/error states gracefully
+- **P0: Deploy programs to devnet** — BLOCKED by airdrop rate limit
+- **P0: Seed demo data** — Depends on deploy
+- **P3: Demo script** — Can draft structure now
+- **P4: Stretch goals** — Netting visualization, yield chart, compliance PDF
 
 ### Blockers
+- Devnet airdrop rate limited (wallet: `CEsL1n9oUiWRPAX2n245tg3nJXRzaVRJTa251nAkQ4mw`)
 - Anchor build/test requires WSL (not native Windows)
 
 ---
@@ -29,6 +33,15 @@
 
 <details>
 <summary>Previous sessions</summary>
+
+### 2026-03-11 (earlier)
+- Fixed RPC connection refused (changed default to devnet)
+- Fixed wallet connect button (useWalletModal)
+- Fixed wallet adapter bundle bloat (individual packages)
+- Added overview error handling
+- Set up Playwright e2e tests (17 tests)
+- Created BACKLOG.md, WORKLOG.md, DECISIONS.md
+- Investor pitch Notion page
 
 ### 2026-03-10
 - Upgraded Anchor 0.30.1 → 0.31.1, fixed all test failures

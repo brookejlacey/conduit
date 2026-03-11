@@ -10,7 +10,7 @@ Status: `[ ]` todo · `[x]` done
 
 - [ ] **Deploy programs to devnet** — All 4 programs need to be live on devnet so dashboard shows real data
 - [ ] **Seed demo data on devnet** — Create institution, register agent, initialize vault, make deposits, log audit entries
-- [ ] **Dashboard error states** — All pages should gracefully handle RPC errors and empty states (overview done, check others)
+- [x] **Dashboard error states** — All pages gracefully handle RPC errors and empty states
 
 ## P1 — Dashboard Polish
 
@@ -23,13 +23,13 @@ Status: `[ ]` todo · `[x]` done
 
 ## P2 — Agent Service
 
-- [ ] **Wire Claude API** — Test basic prompt/response flow for treasury decisions
-- [ ] **Compliance pre-check** — Policy validation before every on-chain action
-- [ ] **Treasury analysis** — Analyze vault positions, decide rebalancing actions
-- [ ] **Settlement batching** — Aggregate cross-border payments into batches
-- [ ] **On-chain audit logging** — Hash reasoning text, store hash + URI on-chain
-- [ ] **Cron scheduler** — Rebalance every 15min, settlements every 4hrs, compliance every 5min
-- [ ] **E2E agent flow** — Agent starts → analyzes → decides → executes → logs
+- [x] **Wire Claude API** — Test basic prompt/response flow for treasury decisions
+- [x] **Compliance pre-check** — Policy validation before every on-chain action
+- [x] **Treasury analysis** — Analyze vault positions, decide rebalancing actions
+- [x] **Settlement batching** — Aggregate cross-border payments into batches
+- [x] **On-chain audit logging** — Hash reasoning text, store hash + URI on-chain
+- [x] **Cron scheduler** — Rebalance every 15min, settlements every 4hrs, compliance every 5min
+- [ ] **E2E agent flow** — Agent starts → analyzes → decides → executes → logs (blocked: needs devnet deploy)
 
 ## P3 — Demo & Submission
 
@@ -89,6 +89,19 @@ Status: `[ ]` todo · `[x]` done
 - [x] Default network changed to devnet
 - [x] Overview page error handling for RPC failures
 - [x] Playwright e2e tests (17 tests passing)
+- [x] Vault, agent, settlement detail pages
+- [x] Responsive mobile sidebar with hamburger menu
+- [x] Skeleton loading states
+- [x] WebSocket real-time updates
+- [x] Header shows actual network
+
+### Agent Service
+- [x] Claude API integration with structured response parsing
+- [x] Treasury analysis with rebalance logic
+- [x] Settlement batch building with netting
+- [x] Compliance pre-checks with safety thresholds
+- [x] On-chain audit logging with reasoning hash
+- [x] Cron scheduler (15min/4hr/5min)
 
 ### Infrastructure
 - [x] Vercel auto-deploy on push
