@@ -141,4 +141,68 @@ describe('agent-registry', () => {
       expect(err.error.errorCode.code).to.equal('AgentInactive');
     }
   });
+
+  it('reactivates a deactivated agent', async () => {
+    await program.methods
+      .reactivateAgent()
+      .accounts({
+        institution: institutionPda,
+        agent: agentPda,
+        admin: admin.publicKey,
+      })
+      .signers([admin])
+      .rpc();
+
+    const agent = await program.account.agentIdentity.fetch(agentPda);
+    expect(agent.active).to.be.true;
+  });
+
+  it('rejects reactivating an already active agent', async () => {
+    try {
+      await program.methods
+        .reactivateAgent()
+        .accounts({
+          institution: institutionPda,
+          agent: agentPda,
+          admin: admin.publicKey,
+        })
+        .signers([admin])
+        .rpc();
+      expect.fail('Should have thrown AgentAlreadyActive error');
+    } catch (err: any) {
+      expect(err.error.errorCode.code).to.equal('AgentAlreadyActive');
+    }
+  });
+
+  it('rejects unauthorized admin from reactivating', async () => {
+    // First deactivate so we can test unauthorized reactivation
+    await program.methods
+      .deactivateAgent()
+      .accounts({
+        institution: institutionPda,
+        agent: agentPda,
+        admin: admin.publicKey,
+      })
+      .signers([admin])
+      .rpc();
+
+    const fakeAdmin = Keypair.generate();
+    await provider.connection.requestAirdrop(fakeAdmin.publicKey, 2 * LAMPORTS_PER_SOL);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    try {
+      await program.methods
+        .reactivateAgent()
+        .accounts({
+          institution: institutionPda,
+          agent: agentPda,
+          admin: fakeAdmin.publicKey,
+        })
+        .signers([fakeAdmin])
+        .rpc();
+      expect.fail('Should have thrown Unauthorized error');
+    } catch (err: unknown) {
+      expect((err as Error).toString()).to.include('Unauthorized');
+    }
+  });
 });

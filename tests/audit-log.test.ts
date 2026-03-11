@@ -187,6 +187,56 @@ describe('audit-log', () => {
     }
   });
 
+  it('rejects deactivated agent from logging', async () => {
+    // Deactivate the agent
+    await registryProgram.methods
+      .deactivateAgent()
+      .accounts({
+        institution: institutionPda,
+        agent: agentIdentityPda,
+        admin: admin.publicKey,
+      })
+      .signers([admin])
+      .rpc();
+
+    const nonceBn = new anchor.BN(nonce);
+    const [auditPda] = PublicKey.findProgramAddressSync(
+      [Buffer.from('audit'), agent.publicKey.toBuffer(), nonceBn.toArrayLike(Buffer, 'le', 8)],
+      program.programId,
+    );
+
+    const reasoningHash = Buffer.alloc(32, 0xcc);
+    const reasoningUri = Buffer.alloc(64, 0);
+
+    try {
+      await program.methods
+        .logEvent(0, null, null, Array.from(reasoningHash), Array.from(reasoningUri), nonceBn)
+        .accounts({
+          auditEntry: auditPda,
+          agent: agent.publicKey,
+          agentIdentity: agentIdentityPda,
+          institution: institutionPda,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([agent])
+        .rpc();
+      expect.fail('Should have thrown AgentInactive error');
+    } catch (err: unknown) {
+      expect((err as Error).toString()).to.include('AgentInactive');
+    }
+
+    // Reactivate for subsequent tests
+    await registryProgram.methods
+      .reactivateAgent()
+      .accounts({
+        institution: institutionPda,
+        agent: agentIdentityPda,
+        admin: admin.publicKey,
+      })
+      .signers([admin])
+      .rpc();
+  });
+
   it('rejects invalid action type', async () => {
     const nonceBn = new anchor.BN(nonce);
 

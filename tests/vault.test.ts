@@ -234,6 +234,76 @@ describe('vault', () => {
     }
   });
 
+  it('withdraws from yield before deposits', async () => {
+    // First accrue some yield so we can withdraw from it
+    const yieldSource = await createAccount(
+      provider.connection,
+      authority,
+      usxMint,
+      authority.publicKey,
+    );
+    await mintTo(provider.connection, authority, usxMint, yieldSource, authority, 500_000_000);
+
+    await program.methods
+      .accrueYield(new anchor.BN(500_000_000)) // 500 USX yield
+      .accounts({
+        vault: vaultPda,
+        yieldSourceTokenAccount: yieldSource,
+        vaultTokenAccount: vaultTokenAccount,
+        authority: authority.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([authority])
+      .rpc();
+
+    const vaultBefore = await program.account.vault.fetch(vaultPda);
+    const depositsBefore = vaultBefore.totalDeposits.toNumber();
+    const yieldBefore = vaultBefore.yieldAccrued.toNumber();
+    expect(yieldBefore).to.equal(500_000_000);
+
+    // Withdraw 200 USX — should come from yield first
+    const dest = await createAccount(provider.connection, authority, usxMint, authority.publicKey);
+    await program.methods
+      .withdraw(new anchor.BN(200_000_000), 0, counterparty)
+      .accounts({
+        vault: vaultPda,
+        vaultTokenAccount: vaultTokenAccount,
+        destinationTokenAccount: dest,
+        authority: authority.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([authority])
+      .rpc();
+
+    const vaultAfter = await program.account.vault.fetch(vaultPda);
+    expect(vaultAfter.yieldAccrued.toNumber()).to.equal(300_000_000); // 500 - 200
+    expect(vaultAfter.totalDeposits.toNumber()).to.equal(depositsBefore); // deposits unchanged
+  });
+
+  it('withdraws from yield then deposits for amounts exceeding yield', async () => {
+    const vaultBefore = await program.account.vault.fetch(vaultPda);
+    const yieldBefore = vaultBefore.yieldAccrued.toNumber(); // 300M from previous test
+    const depositsBefore = vaultBefore.totalDeposits.toNumber();
+
+    // Withdraw 500 USX — 300 from yield, 200 from deposits
+    const dest = await createAccount(provider.connection, authority, usxMint, authority.publicKey);
+    await program.methods
+      .withdraw(new anchor.BN(500_000_000), 0, counterparty)
+      .accounts({
+        vault: vaultPda,
+        vaultTokenAccount: vaultTokenAccount,
+        destinationTokenAccount: dest,
+        authority: authority.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([authority])
+      .rpc();
+
+    const vaultAfter = await program.account.vault.fetch(vaultPda);
+    expect(vaultAfter.yieldAccrued.toNumber()).to.equal(0);
+    expect(vaultAfter.totalDeposits.toNumber()).to.equal(depositsBefore - 200_000_000);
+  });
+
   it('rejects forbidden transaction type', async () => {
     const amount = new anchor.BN(100_000_000);
 
