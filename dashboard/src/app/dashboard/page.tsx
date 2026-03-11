@@ -18,11 +18,12 @@ const ACTION_LABELS: Record<number, string> = {
 };
 
 export default function DashboardOverview() {
-  const { vaults, loading: vaultsLoading } = useVaults();
-  const { agents, loading: agentsLoading } = useAgents();
-  const { entries: auditEntries, loading: auditLoading } = useAuditLog();
+  const { vaults, loading: vaultsLoading, error: vaultsError } = useVaults();
+  const { agents, loading: agentsLoading, error: agentsError } = useAgents();
+  const { entries: auditEntries, loading: auditLoading, error: auditError } = useAuditLog();
 
   const loading = vaultsLoading || agentsLoading || auditLoading;
+  const error = vaultsError || agentsError || auditError;
 
   // Compute real metrics from on-chain data
   const totalAum = vaults.reduce(
@@ -35,6 +36,17 @@ export default function DashboardOverview() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-conduit-navy-50">Overview</h1>
+
+      {error && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4">
+          <p className="text-sm text-amber-400">
+            Unable to connect to Solana network. Showing empty state.
+          </p>
+          <p className="mt-1 text-xs text-amber-500/70">
+            {error.message}
+          </p>
+        </div>
+      )}
 
       {/* Metric Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

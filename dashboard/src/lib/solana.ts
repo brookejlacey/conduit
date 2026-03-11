@@ -11,7 +11,7 @@ export function getRpcUrl(): string {
 }
 
 export function getNetwork(): string {
-  return process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'localnet';
+  return process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'devnet';
 }
 
 export function getWsUrl(): string {
