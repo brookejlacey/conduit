@@ -33,17 +33,17 @@ Status: `[ ]` todo · `[x]` done
 
 ## P3 — Demo & Submission
 
-- [ ] **Demo script** — What to show in 3 minutes (problem → architecture → live agent → dashboard)
+- [x] **Demo script** — What to show in 3 minutes (problem → architecture → live agent → dashboard)
 - [ ] **Record Loom video** — 3-min walkthrough for StableHacks submission
-- [ ] **DoraHacks submission** — Project name, team, links, video
+- [x] **DoraHacks submission** — Project name, team, links, video
 - [ ] **Testnet demo link** — Dashboard URL pointing at devnet with live data
 
 ## P4 — Stretch Goals
 
-- [ ] **Multilateral netting visualization** — Animated flow diagram in dashboard
+- [x] **Multilateral netting visualization** — Animated flow diagram in dashboard
 - [ ] **Multiple agent instances** — Different authority tiers running concurrently
-- [ ] **Yield chart** — Historical yield accrual from on-chain data
-- [ ] **Compliance report PDF** — Export audit trail as downloadable report
+- [x] **Yield chart** — Historical yield accrual from on-chain data
+- [x] **Compliance report PDF** — Export audit trail as downloadable report (CSV + JSON)
 - [ ] **Agent reasoning replay** — Step through past decisions with reasoning text
 - [ ] **IPFS reasoning storage** — Store full reasoning text on IPFS, link via URI
 
