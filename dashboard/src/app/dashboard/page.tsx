@@ -1,6 +1,7 @@
 'use client';
 
 import { MetricCard } from '@/components/shared/MetricCard';
+import { MetricSkeleton, Skeleton } from '@/components/shared/Skeleton';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { formatUsx, formatDate, shortenAddress } from '@/lib/format';
 import { useVaults } from '@/hooks/useVaults';
@@ -49,45 +50,64 @@ export default function DashboardOverview() {
       )}
 
       {/* Metric Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard
-          title="Total AUM"
-          value={loading ? '...' : formatUsx(totalAum)}
-          change=""
-          changeType="neutral"
-          icon="vault"
-        />
-        <MetricCard
-          title="Active Agents"
-          value={loading ? '...' : String(activeAgents)}
-          change={loading ? '' : `${agents.length} total`}
-          changeType="neutral"
-          icon="agent"
-        />
-        <MetricCard
-          title="Vaults"
-          value={loading ? '...' : String(vaults.length)}
-          change=""
-          changeType="neutral"
-          icon="settlement"
-        />
-        <MetricCard
-          title="Audit Entries"
-          value={loading ? '...' : String(auditEntries.length)}
-          change=""
-          changeType="neutral"
-          icon="compliance"
-        />
-      </div>
+      {loading ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <MetricSkeleton />
+          <MetricSkeleton />
+          <MetricSkeleton />
+          <MetricSkeleton />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <MetricCard
+            title="Total AUM"
+            value={formatUsx(totalAum)}
+            change=""
+            changeType="neutral"
+            icon="vault"
+          />
+          <MetricCard
+            title="Active Agents"
+            value={String(activeAgents)}
+            change={`${agents.length} total`}
+            changeType="neutral"
+            icon="agent"
+          />
+          <MetricCard
+            title="Vaults"
+            value={String(vaults.length)}
+            change=""
+            changeType="neutral"
+            icon="settlement"
+          />
+          <MetricCard
+            title="Audit Entries"
+            value={String(auditEntries.length)}
+            change=""
+            changeType="neutral"
+            icon="compliance"
+          />
+        </div>
+      )}
 
       {/* Recent Activity */}
       <div className="card">
         <h2 className="mb-4 text-lg font-semibold text-conduit-navy-100">Recent Activity</h2>
 
         {loading && (
-          <div className="flex items-center justify-center py-8">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-conduit-blue-400 border-t-transparent" />
-            <span className="ml-3 text-sm text-conduit-navy-400">Loading on-chain data...</span>
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center justify-between rounded-lg border border-conduit-navy-700 bg-conduit-navy-900 p-4">
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-5 w-16" />
+                  <div>
+                    <Skeleton className="mb-1 h-4 w-32" />
+                    <Skeleton className="h-3 w-48" />
+                  </div>
+                </div>
+                <Skeleton className="h-3 w-20" />
+              </div>
+            ))}
           </div>
         )}
 

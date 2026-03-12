@@ -24,6 +24,7 @@ import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 import { BN } from '@coral-xyz/anchor';
 import {
   VAULT_PROGRAM_ID,
+  AGENT_REGISTRY_PROGRAM_ID,
   SETTLEMENT_PROGRAM_ID,
   AUDIT_LOG_PROGRAM_ID,
 } from '@conduit/sdk';
@@ -66,6 +67,11 @@ function encodeOptionU64(val: BN | number | null): Buffer {
   return Buffer.concat([Buffer.from([1]), encodeU64(val)]);
 }
 
+function encodeI64(val: BN | number): Buffer {
+  const bn = typeof val === 'number' ? new BN(val) : val;
+  return bn.toArrayLike(Buffer, 'le', 8);
+}
+
 function encodeFixedBytes(data: number[] | Buffer, len: number): Buffer {
   const buf = Buffer.alloc(len, 0);
   const src = Buffer.isBuffer(data) ? data : Buffer.from(data);
@@ -73,9 +79,150 @@ function encodeFixedBytes(data: number[] | Buffer, len: number): Buffer {
   return buf;
 }
 
+function encodeVecPubkey(keys: PublicKey[]): Buffer {
+  const lenBuf = Buffer.alloc(4);
+  lenBuf.writeUInt32LE(keys.length, 0);
+  return Buffer.concat([lenBuf, ...keys.map((k) => k.toBuffer())]);
+}
+
+
+// ---------------------------------------------------------------------------
+// AGENT REGISTRY PROGRAM INSTRUCTIONS
+// ---------------------------------------------------------------------------
+
+export function createRegisterInstitutionIx(
+  institution: PublicKey,
+  admin: PublicKey,
+  name: Buffer | number[],
+  kycHash: Buffer | number[],
+): TransactionInstruction {
+  const data = Buffer.concat([
+    anchorDiscriminator('register_institution'),
+    encodeFixedBytes(name, 32),
+    encodeFixedBytes(kycHash, 32),
+  ]);
+
+  return new TransactionInstruction({
+    programId: AGENT_REGISTRY_PROGRAM_ID,
+    keys: [
+      { pubkey: institution, isSigner: false, isWritable: true },
+      { pubkey: admin, isSigner: true, isWritable: true },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    ],
+    data,
+  });
+}
+
+export function createRegisterAgentIx(
+  institution: PublicKey,
+  agent: PublicKey,
+  agentPubkey: PublicKey,
+  admin: PublicKey,
+  authorityTier: number,
+  scopedPrograms: PublicKey[],
+): TransactionInstruction {
+  const data = Buffer.concat([
+    anchorDiscriminator('register_agent'),
+    encodeU8(authorityTier),
+    encodeVecPubkey(scopedPrograms),
+  ]);
+
+  return new TransactionInstruction({
+    programId: AGENT_REGISTRY_PROGRAM_ID,
+    keys: [
+      { pubkey: institution, isSigner: false, isWritable: true },
+      { pubkey: agent, isSigner: false, isWritable: true },
+      { pubkey: agentPubkey, isSigner: false, isWritable: false },
+      { pubkey: admin, isSigner: true, isWritable: true },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    ],
+    data,
+  });
+}
+
 // ---------------------------------------------------------------------------
 // VAULT PROGRAM INSTRUCTIONS
 // ---------------------------------------------------------------------------
+
+/**
+ * Borsh encoding for PolicyConfig struct:
+ *   daily_spend_limit: u64
+ *   max_single_tx_size: u64
+ *   approved_counterparties: Vec<Pubkey>
+ *   allowed_tx_types: u8
+ *   daily_spent: u64
+ *   last_reset_ts: i64
+ */
+export interface PolicyConfigArgs {
+  dailySpendLimit: BN;
+  maxSingleTxSize: BN;
+  approvedCounterparties: PublicKey[];
+  allowedTxTypes: number;
+  dailySpent: BN;
+  lastResetTs: BN;
+}
+
+function encodePolicyConfig(policy: PolicyConfigArgs): Buffer {
+  return Buffer.concat([
+    encodeU64(policy.dailySpendLimit),
+    encodeU64(policy.maxSingleTxSize),
+    encodeVecPubkey(policy.approvedCounterparties),
+    encodeU8(policy.allowedTxTypes),
+    encodeU64(policy.dailySpent),
+    encodeI64(policy.lastResetTs),
+  ]);
+}
+
+export function createInitializeVaultIx(
+  vault: PublicKey,
+  usxTokenAccount: PublicKey,
+  authority: PublicKey,
+  policy: PolicyConfigArgs,
+  multisigSigners: PublicKey[],
+  multisigThreshold: number,
+  institution: PublicKey,
+): TransactionInstruction {
+  const data = Buffer.concat([
+    anchorDiscriminator('initialize_vault'),
+    encodePolicyConfig(policy),
+    encodeVecPubkey(multisigSigners),
+    encodeU8(multisigThreshold),
+    encodePubkey(institution),
+  ]);
+
+  return new TransactionInstruction({
+    programId: VAULT_PROGRAM_ID,
+    keys: [
+      { pubkey: vault, isSigner: false, isWritable: true },
+      { pubkey: usxTokenAccount, isSigner: false, isWritable: false },
+      { pubkey: authority, isSigner: true, isWritable: true },
+      { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    ],
+    data,
+  });
+}
+
+export function createInitializeSettlementConfigIx(
+  config: PublicKey,
+  admin: PublicKey,
+  maxFxRateAge: BN,
+): TransactionInstruction {
+  const data = Buffer.concat([
+    anchorDiscriminator('initialize_config'),
+    encodeI64(maxFxRateAge),
+  ]);
+
+  return new TransactionInstruction({
+    programId: SETTLEMENT_PROGRAM_ID,
+    keys: [
+      { pubkey: config, isSigner: false, isWritable: true },
+      { pubkey: admin, isSigner: true, isWritable: true },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    ],
+    data,
+  });
+}
 
 export function createDepositIx(
   vault: PublicKey,

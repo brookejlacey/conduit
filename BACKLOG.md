@@ -9,7 +9,7 @@ Status: `[ ]` todo · `[x]` done
 ## P0 — Ship Blockers
 
 - [ ] **Deploy programs to devnet** — All 4 programs need to be live on devnet so dashboard shows real data
-- [ ] **Seed demo data on devnet** — Create institution, register agent, initialize vault, make deposits, log audit entries
+- [x] **Seed demo data script** — Full pipeline: institution, agent, vault, deposits, yield, settlement batch, audit entries (ready to run when programs deployed)
 - [x] **Dashboard error states** — All pages gracefully handle RPC errors and empty states
 
 ## P1 — Dashboard Polish
