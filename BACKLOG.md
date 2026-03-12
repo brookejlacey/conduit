@@ -44,7 +44,7 @@ Status: `[ ]` todo · `[x]` done
 - [ ] **Multiple agent instances** — Different authority tiers running concurrently
 - [x] **Yield chart** — Historical yield accrual from on-chain data
 - [x] **Compliance report PDF** — Export audit trail as downloadable report (CSV + JSON)
-- [ ] **Agent reasoning replay** — Step through past decisions with reasoning text
+- [x] **Agent reasoning replay** — Step through past decisions with reasoning text
 - [ ] **IPFS reasoning storage** — Store full reasoning text on IPFS, link via URI
 
 ---

@@ -1,12 +1,13 @@
 'use client';
 
-import { use } from 'react';
+import { use, useState } from 'react';
 import Link from 'next/link';
 import { useAgents } from '@/hooks/useAgents';
 import { useAuditLog } from '@/hooks/useAuditLog';
 import { TierBadge } from '@/components/agent/TierBadge';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { DecisionTimeline } from '@/components/agent/DecisionTimeline';
+import { ReasoningReplay } from '@/components/agent/ReasoningReplay';
 import { formatDate, formatUsx, shortenAddress } from '@/lib/format';
 import { ActionType } from '@conduit/sdk';
 
@@ -19,11 +20,14 @@ const ACTION_LABELS: Record<number, string> = {
   [ActionType.YieldAccrual]: 'Yield Accrual',
 };
 
+type ViewMode = 'timeline' | 'replay';
+
 export default function AgentDetailPage({ params }: { params: Promise<{ index: string }> }) {
   const { index } = use(params);
   const agentIndex = parseInt(index, 10);
   const { agents, loading, error } = useAgents();
   const { entries: auditEntries, loading: auditLoading } = useAuditLog();
+  const [viewMode, setViewMode] = useState<ViewMode>('timeline');
 
   if (loading) {
     return (
@@ -158,9 +162,28 @@ export default function AgentDetailPage({ params }: { params: Promise<{ index: s
         )}
       </div>
 
-      {/* Decision Timeline */}
+      {/* Decision Timeline / Reasoning Replay */}
       <div className="card">
-        <h2 className="mb-4 text-lg font-semibold text-conduit-navy-100">Decision Timeline</h2>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-conduit-navy-100">
+            {viewMode === 'timeline' ? 'Decision Timeline' : 'Reasoning Replay'}
+          </h2>
+          <div className="flex rounded-lg border border-conduit-navy-600 bg-conduit-navy-800">
+            <button
+              onClick={() => setViewMode('timeline')}
+              className={`px-3 py-1.5 text-xs font-medium transition ${viewMode === 'timeline' ? 'bg-conduit-blue-500/20 text-conduit-blue-400' : 'text-conduit-navy-400 hover:text-conduit-navy-200'}`}
+            >
+              Timeline
+            </button>
+            <button
+              onClick={() => setViewMode('replay')}
+              className={`px-3 py-1.5 text-xs font-medium transition ${viewMode === 'replay' ? 'bg-conduit-blue-500/20 text-conduit-blue-400' : 'text-conduit-navy-400 hover:text-conduit-navy-200'}`}
+            >
+              Replay
+            </button>
+          </div>
+        </div>
+
         {auditLoading && (
           <div className="flex items-center justify-center py-6">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-conduit-blue-400 border-t-transparent" />
@@ -170,8 +193,18 @@ export default function AgentDetailPage({ params }: { params: Promise<{ index: s
         {!auditLoading && timelineEntries.length === 0 && (
           <p className="py-4 text-center text-sm text-conduit-navy-400">No decisions recorded for this agent.</p>
         )}
-        {!auditLoading && timelineEntries.length > 0 && (
+        {!auditLoading && timelineEntries.length > 0 && viewMode === 'timeline' && (
           <DecisionTimeline entries={timelineEntries} />
+        )}
+        {!auditLoading && timelineEntries.length > 0 && viewMode === 'replay' && (
+          <ReasoningReplay
+            entries={timelineEntries.map((e) => ({
+              ...e,
+              reasoningHash: e.reasoning.includes('hash:')
+                ? e.reasoning.split('hash: ')[1]?.slice(0, 16) || ''
+                : '',
+            }))}
+          />
         )}
       </div>
     </div>
