@@ -6,6 +6,7 @@ import { useVaults } from '@/hooks/useVaults';
 import { useAuditLog } from '@/hooks/useAuditLog';
 import { formatUsx, formatDate, formatAbsoluteDate, shortenAddress } from '@/lib/format';
 import { ActionType } from '@conduit/sdk';
+import YieldChart from '@/components/vault/YieldChart';
 
 const ACTION_LABELS: Record<number, string> = {
   [ActionType.Deposit]: 'Deposit',
@@ -129,6 +130,14 @@ export default function VaultDetailPage({ params }: { params: Promise<{ index: s
           <p className="mt-2 text-xs text-conduit-navy-500">Last reset: {formatAbsoluteDate(lastReset)}</p>
         )}
       </div>
+
+      {/* Yield Accrual Chart */}
+      {yieldAccrued > 0 && (
+        <div className="card">
+          <h2 className="mb-4 text-lg font-semibold text-conduit-navy-100">Yield Accrual (30d)</h2>
+          <YieldChart yieldAccrued={yieldAccrued} />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Policy Configuration */}

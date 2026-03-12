@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { DecisionTimeline } from '@/components/agent/DecisionTimeline';
+import { ComplianceExport } from '@/components/audit/ComplianceExport';
 import { Skeleton } from '@/components/shared/Skeleton';
 import { useAuditLog } from '@/hooks/useAuditLog';
 import { shortenAddress, formatUsx } from '@/lib/format';
@@ -55,6 +56,7 @@ export default function AuditPage() {
             <option value="Yield Accrual">Yield Accrual</option>
             <option value="Policy Update">Policy Updates</option>
           </select>
+          <ComplianceExport entries={entries} />
           <button
             onClick={refresh}
             className="rounded-lg border border-conduit-navy-600 bg-conduit-navy-800 px-4 py-2 text-sm text-conduit-navy-200 transition hover:bg-conduit-navy-700"

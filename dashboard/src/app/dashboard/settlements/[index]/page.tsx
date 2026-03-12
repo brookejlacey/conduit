@@ -4,6 +4,7 @@ import { use } from 'react';
 import Link from 'next/link';
 import { useSettlements } from '@/hooks/useSettlements';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import { NettingFlow } from '@/components/settlement/NettingFlow';
 import { formatUsx, formatDate, formatAbsoluteDate, shortenAddress } from '@/lib/format';
 import { SettlementStatus } from '@conduit/sdk';
 
@@ -96,37 +97,10 @@ export default function SettlementDetailPage({ params }: { params: Promise<{ ind
         </div>
       </div>
 
-      {/* Netting Visualization */}
+      {/* Netting Flow Visualization */}
       <div className="card">
-        <h2 className="mb-4 text-lg font-semibold text-conduit-navy-100">Netting Breakdown</h2>
-        <div className="flex items-center gap-4">
-          <div className="flex-1">
-            <div className="mb-1 flex justify-between text-xs text-conduit-navy-400">
-              <span>Gross</span>
-              <span>{formatUsx(gross)}</span>
-            </div>
-            <div className="h-4 w-full overflow-hidden rounded-full bg-conduit-navy-700">
-              <div className="h-full rounded-full bg-conduit-navy-400" style={{ width: '100%' }} />
-            </div>
-          </div>
-        </div>
-        <div className="mt-3 flex items-center gap-4">
-          <div className="flex-1">
-            <div className="mb-1 flex justify-between text-xs text-conduit-navy-400">
-              <span>Net (after netting)</span>
-              <span>{formatUsx(net)}</span>
-            </div>
-            <div className="h-4 w-full overflow-hidden rounded-full bg-conduit-navy-700">
-              <div
-                className="h-full rounded-full bg-conduit-emerald-400"
-                style={{ width: gross > 0 ? `${(net / gross) * 100}%` : '0%' }}
-              />
-            </div>
-          </div>
-        </div>
-        <p className="mt-3 text-xs text-conduit-navy-500">
-          Multilateral netting reduced settlement volume by {nettingEfficiency}%, saving {formatUsx(savings)} in transfer costs.
-        </p>
+        <h2 className="mb-4 text-lg font-semibold text-conduit-navy-100">Multilateral Netting</h2>
+        <NettingFlow gross={gross} net={net} entryCount={batch.entryCount} />
       </div>
 
       {/* Batch Details */}
