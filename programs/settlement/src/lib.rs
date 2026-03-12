@@ -6,7 +6,7 @@ pub mod state;
 
 use instructions::*;
 
-declare_id!("7Mm3yQsmkpEeWT5LSpjZn4vucT4n1vcLswG6LCHSZeAe");
+declare_id!("DQj9jfTNEaMCrUD8DfAiRkcmMiragBYv33Qh27ZiZuYU");
 
 #[program]
 pub mod settlement {

@@ -51,16 +51,16 @@ export function loadConfig(): AgentConfig {
     },
     programs: {
       vault: new PublicKey(
-        optionalEnv('VAULT_PROGRAM_ID', 'GdmDuzHbXd2hytSpPyfwnaARSCTnntbTnniAPLr3JRHb'),
+        optionalEnv('VAULT_PROGRAM_ID', 'Ctd8BHaHPD7QUjk18SeRkaadpkR5dDF2opq4Cn6vGPii'),
       ),
       agentRegistry: new PublicKey(
-        optionalEnv('AGENT_REGISTRY_PROGRAM_ID', '2bm9F6XrH3NoTKUQgSM5uP5edKtGpcau9pHK6QiPUz5v'),
+        optionalEnv('AGENT_REGISTRY_PROGRAM_ID', 'D6ixuieTocq25Rf2Ru4qAAuxSPx5mbR6UABjY7PoNDnh'),
       ),
       settlement: new PublicKey(
-        optionalEnv('SETTLEMENT_PROGRAM_ID', '7Mm3yQsmkpEeWT5LSpjZn4vucT4n1vcLswG6LCHSZeAe'),
+        optionalEnv('SETTLEMENT_PROGRAM_ID', 'DQj9jfTNEaMCrUD8DfAiRkcmMiragBYv33Qh27ZiZuYU'),
       ),
       auditLog: new PublicKey(
-        optionalEnv('AUDIT_LOG_PROGRAM_ID', 'ATyFG3Bc481rrNCWa7pBHvSVgY1tc6nW8mTC2pcm6kqT'),
+        optionalEnv('AUDIT_LOG_PROGRAM_ID', '9kDA9TbKmTMdSEpM4ZpYTYAmniuETRVL3uWWrS6CQ7ZG'),
       ),
     },
     agent: {

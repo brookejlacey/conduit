@@ -2,19 +2,19 @@ import { PublicKey } from '@solana/web3.js';
 
 // Program IDs - update these after `anchor build`
 export const VAULT_PROGRAM_ID = new PublicKey(
-  process.env.VAULT_PROGRAM_ID || 'GdmDuzHbXd2hytSpPyfwnaARSCTnntbTnniAPLr3JRHb',
+  process.env.VAULT_PROGRAM_ID || 'Ctd8BHaHPD7QUjk18SeRkaadpkR5dDF2opq4Cn6vGPii',
 );
 
 export const AGENT_REGISTRY_PROGRAM_ID = new PublicKey(
-  process.env.AGENT_REGISTRY_PROGRAM_ID || '2bm9F6XrH3NoTKUQgSM5uP5edKtGpcau9pHK6QiPUz5v',
+  process.env.AGENT_REGISTRY_PROGRAM_ID || 'D6ixuieTocq25Rf2Ru4qAAuxSPx5mbR6UABjY7PoNDnh',
 );
 
 export const SETTLEMENT_PROGRAM_ID = new PublicKey(
-  process.env.SETTLEMENT_PROGRAM_ID || '7Mm3yQsmkpEeWT5LSpjZn4vucT4n1vcLswG6LCHSZeAe',
+  process.env.SETTLEMENT_PROGRAM_ID || 'DQj9jfTNEaMCrUD8DfAiRkcmMiragBYv33Qh27ZiZuYU',
 );
 
 export const AUDIT_LOG_PROGRAM_ID = new PublicKey(
-  process.env.AUDIT_LOG_PROGRAM_ID || 'ATyFG3Bc481rrNCWa7pBHvSVgY1tc6nW8mTC2pcm6kqT',
+  process.env.AUDIT_LOG_PROGRAM_ID || '9kDA9TbKmTMdSEpM4ZpYTYAmniuETRVL3uWWrS6CQ7ZG',
 );
 
 // PDA Seeds
