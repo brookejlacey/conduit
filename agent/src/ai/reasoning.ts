@@ -1,10 +1,12 @@
 import { createHash } from 'crypto';
+import { IPFSStorage } from '../storage/ipfs';
 
 export interface ReasoningRecord {
   reasoning: string;
   hash: Buffer;
   uri: Buffer;
   timestamp: number;
+  ipfsCid?: string;
 }
 
 /**
@@ -16,29 +18,43 @@ export function hashReasoning(reasoning: string): Buffer {
 
 /**
  * Create a padded 64-byte URI buffer for on-chain storage.
- * For hackathon, we use a simple format. In production, store on IPFS/Arweave.
  */
-export function createReasoningUri(identifier: string): Buffer {
-  const uri = `conduit://reasoning/${identifier}`;
+export function createReasoningUri(uri: string): Buffer {
   const buffer = Buffer.alloc(64, 0);
   Buffer.from(uri, 'utf-8').copy(buffer, 0, 0, Math.min(uri.length, 64));
   return buffer;
 }
 
 /**
- * Create a full reasoning record ready for on-chain logging.
+ * Create a full reasoning record, optionally uploading to IPFS.
  */
-export function createReasoningRecord(reasoning: string): ReasoningRecord {
+export async function createReasoningRecord(
+  reasoning: string,
+  ipfsStorage?: IPFSStorage,
+  metadata?: Record<string, string>,
+): Promise<ReasoningRecord> {
   const hash = hashReasoning(reasoning);
-  const identifier = hash.toString('hex').slice(0, 16);
-  const uri = createReasoningUri(identifier);
+  const timestamp = Date.now();
+  let uri: Buffer;
+  let ipfsCid: string | undefined;
 
-  return {
-    reasoning,
-    hash,
-    uri,
-    timestamp: Date.now(),
-  };
+  // Try IPFS upload if configured
+  if (ipfsStorage?.isConfigured) {
+    try {
+      const result = await ipfsStorage.uploadReasoning(reasoning, metadata);
+      uri = createReasoningUri(result.uri);
+      ipfsCid = result.cid;
+    } catch {
+      // Fallback to hash-based URI
+      const identifier = hash.toString('hex').slice(0, 16);
+      uri = createReasoningUri(`conduit://reasoning/${identifier}`);
+    }
+  } else {
+    const identifier = hash.toString('hex').slice(0, 16);
+    uri = createReasoningUri(`conduit://reasoning/${identifier}`);
+  }
+
+  return { reasoning, hash, uri, timestamp, ipfsCid };
 }
 
 /**

@@ -12,11 +12,13 @@
 - **Seeded demo data on devnet** — Institution, agent, vault (8.5M USX + 125K yield), 3 settlement entries, 7 audit logs
 - **Made seed script idempotent** — Handles re-runs gracefully (reads on-chain state for PDA derivation)
 - **Rebuilt SDK** — dist had stale program IDs from old build
+- **E2E agent flow (P2)** — Deposit execution in treasury.ts, settlement vault PDA resolution
+- **Multi-agent instances (P4)** — Tier-based permissions (Observer/Executor/Manager/Admin), concurrent schedulers, per-agent logging
+- **IPFS reasoning storage (P4)** — Pinata integration for reasoning text upload, dashboard shows "View on IPFS" links
+- **Dashboard IPFS UI** — Audit log decodes ipfs:// URIs, shows clickable Pinata gateway links
 
 ### What's next
-- **P2: E2E agent flow** — Now unblocked with devnet deploy
-- **P3: Record Loom video** — 3-min walkthrough
-- **P3: Testnet demo link** — Dashboard URL with live data
+- **P3: Record Loom video** — 3-min walkthrough (manual)
 
 ### Blockers
 - Anchor build/test requires WSL (not native Windows)

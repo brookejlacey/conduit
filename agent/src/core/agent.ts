@@ -1,6 +1,6 @@
 import { Connection, Keypair } from '@solana/web3.js';
 import { AnchorProvider, Wallet } from '@coral-xyz/anchor';
-import { AgentConfig } from '../config';
+import { AgentConfig, AuthorityTier } from '../config';
 import { TreasuryService } from '../services/treasury';
 import { SettlementService } from '../services/settlement';
 import { ComplianceService } from '../services/compliance';
@@ -8,6 +8,20 @@ import { MarketService } from '../services/market';
 import { ClaudeClient } from '../ai/claude';
 import { OnChainLogger } from '../logging/onchain';
 import type { Logger } from 'pino';
+
+/**
+ * Tier permissions:
+ *   0 (Observer)  — compliance scans only (read-only)
+ *   1 (Executor)  — + rebalance execution
+ *   2 (Manager)   — + settlement batching
+ *   3 (Admin)     — full access (all actions)
+ */
+const TIER_NAMES: Record<AuthorityTier, string> = {
+  0: 'Observer',
+  1: 'Executor',
+  2: 'Manager',
+  3: 'Admin',
+};
 
 export class ConduitAgent {
   private provider: AnchorProvider;
@@ -17,13 +31,20 @@ export class ConduitAgent {
   public market: MarketService;
   public claude: ClaudeClient;
   public auditLogger: OnChainLogger;
+  public readonly name: string;
+  public readonly tier: AuthorityTier;
 
   constructor(
     private connection: Connection,
     private wallet: Keypair,
     config: AgentConfig,
     private logger: Logger,
+    name: string = 'primary',
+    tier: AuthorityTier = 3,
   ) {
+    this.name = name;
+    this.tier = tier;
+
     const anchorWallet = new Wallet(wallet);
     this.provider = new AnchorProvider(connection, anchorWallet, {
       commitment: 'confirmed',
@@ -45,7 +66,10 @@ export class ConduitAgent {
   }
 
   async initialize(): Promise<void> {
-    this.logger.info('Initializing Conduit Agent...');
+    this.logger.info(
+      { name: this.name, tier: TIER_NAMES[this.tier], pubkey: this.wallet.publicKey.toBase58() },
+      'Initializing Conduit Agent...',
+    );
 
     const balance = await this.connection.getBalance(this.wallet.publicKey);
     this.logger.info(
@@ -57,11 +81,17 @@ export class ConduitAgent {
       this.logger.warn('Agent SOL balance is low. Some transactions may fail.');
     }
 
-    this.logger.info('Agent initialized successfully');
+    this.logger.info({ name: this.name, tier: TIER_NAMES[this.tier] }, 'Agent initialized');
   }
 
   async runRebalanceCheck(): Promise<void> {
-    this.logger.info('Running rebalance check...');
+    // Tier 0 (Observer) cannot execute rebalances
+    if (this.tier < 1) {
+      this.logger.debug({ name: this.name, tier: TIER_NAMES[this.tier] }, 'Skipping rebalance (insufficient tier)');
+      return;
+    }
+
+    this.logger.info({ agent: this.name }, 'Running rebalance check...');
     try {
       const decision = await this.treasury.analyzeAndRebalance();
       if (decision.shouldRebalance) {
@@ -85,7 +115,13 @@ export class ConduitAgent {
   }
 
   async runSettlementBatch(): Promise<void> {
-    this.logger.info('Running settlement batch...');
+    // Tier 0-1 cannot run settlements
+    if (this.tier < 2) {
+      this.logger.debug({ name: this.name, tier: TIER_NAMES[this.tier] }, 'Skipping settlement (insufficient tier)');
+      return;
+    }
+
+    this.logger.info({ agent: this.name }, 'Running settlement batch...');
     try {
       const batch = await this.settlement.buildBatch();
       if (batch.entries.length > 0) {
@@ -104,7 +140,8 @@ export class ConduitAgent {
   }
 
   async runComplianceScan(): Promise<void> {
-    this.logger.info('Running compliance scan...');
+    // All tiers can run compliance scans (read-only)
+    this.logger.info({ agent: this.name }, 'Running compliance scan...');
     try {
       const report = await this.compliance.runFullScan();
       this.logger.info({ violations: report.violations.length }, 'Compliance scan complete');

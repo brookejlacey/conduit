@@ -15,6 +15,17 @@ function optionalEnv(name: string, defaultValue: string): string {
   return process.env[name] || defaultValue;
 }
 
+export type AuthorityTier = 0 | 1 | 2 | 3; // Observer, Executor, Manager, Admin
+
+export interface AgentInstanceConfig {
+  name: string;
+  keypairPath: string;
+  tier: AuthorityTier;
+  cronRebalance: string;
+  cronSettlement: string;
+  cronCompliance: string;
+}
+
 export interface AgentConfig {
   solana: {
     rpcUrl: string;
@@ -33,6 +44,7 @@ export interface AgentConfig {
     cronCompliance: string;
     logLevel: string;
   };
+  agents: AgentInstanceConfig[];
   anthropic: {
     apiKey: string;
   };
@@ -41,9 +53,50 @@ export interface AgentConfig {
     kycHash: string;
     adminPubkey: string;
   };
+  storage: {
+    ipfsEnabled: boolean;
+    pinataJwt: string;
+  };
+}
+
+/**
+ * Parse multi-agent config from AGENT_INSTANCES env var.
+ * Format: "name:path:tier;name:path:tier;..."
+ * Example: "executor:~/.config/solana/executor.json:1;manager:~/.config/solana/manager.json:2"
+ */
+function parseAgentInstances(defaultKeypair: string, defaultCrons: { r: string; s: string; c: string }): AgentInstanceConfig[] {
+  const instancesEnv = process.env.AGENT_INSTANCES;
+  if (!instancesEnv) {
+    // Single agent mode (default)
+    return [{
+      name: 'primary',
+      keypairPath: defaultKeypair,
+      tier: 3 as AuthorityTier, // Admin by default
+      cronRebalance: defaultCrons.r,
+      cronSettlement: defaultCrons.s,
+      cronCompliance: defaultCrons.c,
+    }];
+  }
+
+  return instancesEnv.split(';').filter(Boolean).map((inst) => {
+    const [name, path, tierStr] = inst.split(':');
+    return {
+      name: name || 'agent',
+      keypairPath: path || defaultKeypair,
+      tier: (parseInt(tierStr) || 3) as AuthorityTier,
+      cronRebalance: defaultCrons.r,
+      cronSettlement: defaultCrons.s,
+      cronCompliance: defaultCrons.c,
+    };
+  });
 }
 
 export function loadConfig(): AgentConfig {
+  const keypairPath = optionalEnv('AGENT_KEYPAIR_PATH', '~/.config/solana/agent.json');
+  const cronRebalance = optionalEnv('AGENT_CRON_REBALANCE', '*/15 * * * *');
+  const cronSettlement = optionalEnv('AGENT_CRON_SETTLEMENT', '0 */4 * * *');
+  const cronCompliance = optionalEnv('AGENT_CRON_COMPLIANCE', '*/5 * * * *');
+
   return {
     solana: {
       rpcUrl: optionalEnv('NEXT_PUBLIC_SOLANA_RPC_URL', 'http://127.0.0.1:8899'),
@@ -64,12 +117,13 @@ export function loadConfig(): AgentConfig {
       ),
     },
     agent: {
-      keypairPath: optionalEnv('AGENT_KEYPAIR_PATH', '~/.config/solana/agent.json'),
-      cronRebalance: optionalEnv('AGENT_CRON_REBALANCE', '*/15 * * * *'),
-      cronSettlement: optionalEnv('AGENT_CRON_SETTLEMENT', '0 */4 * * *'),
-      cronCompliance: optionalEnv('AGENT_CRON_COMPLIANCE', '*/5 * * * *'),
+      keypairPath,
+      cronRebalance,
+      cronSettlement,
+      cronCompliance,
       logLevel: optionalEnv('AGENT_LOG_LEVEL', 'info'),
     },
+    agents: parseAgentInstances(keypairPath, { r: cronRebalance, s: cronSettlement, c: cronCompliance }),
     anthropic: {
       apiKey: requireEnv('ANTHROPIC_API_KEY'),
     },
@@ -80,6 +134,10 @@ export function loadConfig(): AgentConfig {
         '0000000000000000000000000000000000000000000000000000000000000000',
       ),
       adminPubkey: optionalEnv('INSTITUTION_ADMIN_PUBKEY', ''),
+    },
+    storage: {
+      ipfsEnabled: optionalEnv('IPFS_ENABLED', 'false') === 'true',
+      pinataJwt: optionalEnv('PINATA_JWT', ''),
     },
   };
 }

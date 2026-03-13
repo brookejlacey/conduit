@@ -2,6 +2,7 @@ import { AnchorProvider, BN, Wallet } from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
 import { AgentConfig } from '../config';
 import { createReasoningRecord } from '../ai/reasoning';
+import { IPFSStorage } from '../storage/ipfs';
 import {
   findAuditEntryPda,
   findAgentPda,
@@ -13,12 +14,20 @@ import type { Logger } from 'pino';
 
 export class OnChainLogger {
   private nonce = 0;
+  private ipfsStorage?: IPFSStorage;
 
   constructor(
     private provider: AnchorProvider,
     private config: AgentConfig,
     private logger: Logger,
-  ) {}
+  ) {
+    // Initialize IPFS if configured
+    const pinataJwt = process.env.PINATA_JWT;
+    if (pinataJwt) {
+      this.ipfsStorage = new IPFSStorage(pinataJwt, logger);
+      this.logger.info('IPFS storage enabled (Pinata)');
+    }
+  }
 
   async logAction(
     actionType: number,
@@ -26,7 +35,10 @@ export class OnChainLogger {
     amount: number | null,
     reasoning: string,
   ): Promise<string> {
-    const record = createReasoningRecord(reasoning);
+    const record = await createReasoningRecord(reasoning, this.ipfsStorage, {
+      actionType: String(actionType),
+      agent: (this.provider.wallet as Wallet).payer.publicKey.toBase58(),
+    });
     const payer = (this.provider.wallet as Wallet).payer;
     const connection = this.provider.connection;
 
@@ -36,6 +48,7 @@ export class OnChainLogger {
         targetVault: targetVault?.toBase58(),
         amount,
         reasoningHash: record.hash.toString('hex'),
+        ipfsCid: record.ipfsCid,
       },
       'Logging action on-chain',
     );
@@ -44,15 +57,12 @@ export class OnChainLogger {
       const nonce = new BN(this.nonce++);
       const [auditEntryPda] = findAuditEntryPda(payer.publicKey, nonce);
 
-      // Derive the agent's institution PDA and agent identity PDA
-      // These are needed for the cross-program verification in the audit-log program
       const institutionAdmin = this.config.institution.adminPubkey
         ? new PublicKey(this.config.institution.adminPubkey)
         : payer.publicKey;
       const [institutionPda] = findInstitutionPda(institutionAdmin);
       const [agentIdentityPda] = findAgentPda(institutionPda, payer.publicKey);
 
-      // Build the log_event instruction with proper Borsh encoding
       const ix = createLogEventIx(
         auditEntryPda,
         payer.publicKey,
@@ -69,7 +79,7 @@ export class OnChainLogger {
       const result = await buildAndSendTransaction(connection, payer, [ix]);
 
       this.logger.info(
-        { txSignature: result.signature, reasoningHash: record.hash.toString('hex') },
+        { txSignature: result.signature, reasoningHash: record.hash.toString('hex'), ipfsCid: record.ipfsCid },
         'Audit entry logged on-chain',
       );
 

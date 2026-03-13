@@ -29,7 +29,7 @@ Status: `[ ]` todo · `[x]` done
 - [x] **Settlement batching** — Aggregate cross-border payments into batches
 - [x] **On-chain audit logging** — Hash reasoning text, store hash + URI on-chain
 - [x] **Cron scheduler** — Rebalance every 15min, settlements every 4hrs, compliance every 5min
-- [ ] **E2E agent flow** — Agent starts → analyzes → decides → executes → logs
+- [x] **E2E agent flow** — Agent starts → analyzes → decides → executes → logs (2026-03-13)
 
 ## P3 — Demo & Submission
 
@@ -41,11 +41,11 @@ Status: `[ ]` todo · `[x]` done
 ## P4 — Stretch Goals
 
 - [x] **Multilateral netting visualization** — Animated flow diagram in dashboard
-- [ ] **Multiple agent instances** — Different authority tiers running concurrently
+- [x] **Multiple agent instances** — Different authority tiers running concurrently (2026-03-13)
 - [x] **Yield chart** — Historical yield accrual from on-chain data
 - [x] **Compliance report PDF** — Export audit trail as downloadable report (CSV + JSON)
 - [x] **Agent reasoning replay** — Step through past decisions with reasoning text
-- [ ] **IPFS reasoning storage** — Store full reasoning text on IPFS, link via URI
+- [x] **IPFS reasoning storage** — Store full reasoning text on IPFS, link via URI (2026-03-13)
 
 ---
 

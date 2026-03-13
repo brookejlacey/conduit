@@ -10,6 +10,8 @@ interface TimelineEntry {
   targetVault: string | null;
   amount: number | null;
   reasoning: string;
+  reasoningUri?: string;
+  ipfsLink?: string | null;
   timestamp: number;
   slot: number;
 }
@@ -103,6 +105,22 @@ export function DecisionTimeline({ entries }: DecisionTimelineProps) {
                       <span className="rounded bg-conduit-navy-700 px-2 py-0.5 text-xs font-mono text-conduit-navy-400">
                         SHA-256 verified on-chain
                       </span>
+                      {entry.ipfsLink && (
+                        <a
+                          href={entry.ipfsLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rounded bg-conduit-blue-500/20 px-2 py-0.5 text-xs font-mono text-conduit-blue-400 hover:bg-conduit-blue-500/30 transition"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          View on IPFS
+                        </a>
+                      )}
+                      {entry.reasoningUri && !entry.ipfsLink && (
+                        <span className="rounded bg-conduit-navy-700 px-2 py-0.5 text-xs font-mono text-conduit-navy-500">
+                          {entry.reasoningUri.slice(0, 40)}
+                        </span>
+                      )}
                     </div>
                   </div>
                 )}

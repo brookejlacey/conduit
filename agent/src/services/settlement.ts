@@ -7,6 +7,7 @@ import { SETTLEMENT_SYSTEM_PROMPT } from '../ai/prompts/settlement';
 import {
   findSettlementBatchPda,
   findSettlementEntryPda,
+  findVaultPda,
 } from '@conduit/sdk';
 import { createBatchIx, createAddEntryIx } from '../chain/instructions';
 import { buildAndSendTransaction } from '../chain/transactions';
@@ -39,27 +40,46 @@ export class SettlementService {
   async getPendingPayments(): Promise<SettlementEntryPlan[]> {
     this.logger.debug('Fetching pending payments...');
 
-    // In a full implementation, this would query pending payment requests
-    // from an off-chain database or on-chain escrow accounts.
-    // For now, return mock data to demonstrate the flow.
-    const mockPayments: SettlementEntryPlan[] = [
+    // Resolve actual vault PDA for the agent's authority
+    const payer = (this.provider.wallet as Wallet).payer;
+    const [vaultPda] = findVaultPda(payer.publicKey);
+
+    // Check if vault exists on-chain
+    const vaultAccount = await this.provider.connection.getAccountInfo(vaultPda);
+    if (!vaultAccount) {
+      this.logger.warn('No vault found for agent authority, using mock vault');
+    }
+
+    const sourceVault = vaultAccount ? vaultPda : this.config.programs.vault;
+
+    // Simulated pending cross-border payments
+    // In production: query payment queue database or on-chain escrow
+    const marketData = await this.market.getMarketSnapshot();
+    const payments: SettlementEntryPlan[] = [
       {
-        fromVault: this.config.programs.vault,
-        toVault: PublicKey.default,
+        fromVault: sourceVault,
+        toVault: sourceVault, // self-settlement for demo
         amountUsx: 50_000 * 1e6,
         destinationCurrency: 'EUR',
-        fxRate: 92_000_000, // 0.92 scaled by 1e8
+        fxRate: Math.round(marketData.fxRates['USD/EUR'] * 1e8),
       },
       {
-        fromVault: this.config.programs.vault,
-        toVault: PublicKey.default,
+        fromVault: sourceVault,
+        toVault: sourceVault,
         amountUsx: 25_000 * 1e6,
         destinationCurrency: 'GBP',
-        fxRate: 79_000_000, // 0.79 scaled by 1e8
+        fxRate: Math.round(marketData.fxRates['USD/GBP'] * 1e8),
+      },
+      {
+        fromVault: sourceVault,
+        toVault: sourceVault,
+        amountUsx: 15_000 * 1e6,
+        destinationCurrency: 'JPY',
+        fxRate: Math.round(marketData.fxRates['USD/JPY'] * 1e8),
       },
     ];
 
-    return mockPayments;
+    return payments;
   }
 
   async buildBatch(): Promise<SettlementBatchPlan> {
@@ -70,12 +90,10 @@ export class SettlementService {
 
     const response = await this.claude.analyze(SETTLEMENT_SYSTEM_PROMPT, prompt);
 
-    // Calculate netting — net_offset is computed on-chain from amount * fx_rate
     let totalGross = 0;
     let totalNet = 0;
     const entries = pendingPayments.map((p) => {
       totalGross += p.amountUsx;
-      // Mirror the on-chain computation: amount * fx_rate / 1e8
       const netAmount = Math.round(p.amountUsx * (p.fxRate / 1e8));
       totalNet += netAmount;
       return { ...p };
@@ -105,9 +123,8 @@ export class SettlementService {
     const [batchPda] = findSettlementBatchPda(payer.publicKey, batchId);
 
     try {
-      // 1. Create the batch on-chain with proper Borsh-encoded instruction
+      // 1. Create the batch on-chain
       const ix = createBatchIx(batchPda, payer.publicKey, batchId);
-
       const result = await buildAndSendTransaction(connection, payer, [ix]);
       this.logger.info(
         { txSignature: result.signature, batchId: batchId.toString() },

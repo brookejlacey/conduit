@@ -1,13 +1,14 @@
 import { AnchorProvider, BN, Wallet } from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
-import { getAssociatedTokenAddress } from '@solana/spl-token';
 import { AgentConfig } from '../config';
 import { ClaudeClient } from '../ai/claude';
 import { MarketService } from './market';
 import { REBALANCE_SYSTEM_PROMPT } from '../ai/prompts/rebalance';
-import { VAULT_PROGRAM_ID, decodeVaultAccount } from '@conduit/sdk';
-import { createWithdrawIx } from '../chain/instructions';
+import { VAULT_PROGRAM_ID, decodeVaultAccount, findDepositReceiptPda } from '@conduit/sdk';
+import { createWithdrawIx, createDepositIx } from '../chain/instructions';
 import { buildAndSendTransaction } from '../chain/transactions';
+import { createHash } from 'crypto';
+import { getAssociatedTokenAddress } from '@solana/spl-token';
 import type { Logger } from 'pino';
 
 export interface RebalanceDecision {
@@ -117,7 +118,6 @@ export class TreasuryService {
     const connection = this.provider.connection;
 
     try {
-      // Find the target vault's on-chain data
       const positions = await this.getVaultPositions();
       const targetPosition = positions.find(
         (p) => p.address.toBase58() === decision.targetVault!.toBase58(),
@@ -129,42 +129,63 @@ export class TreasuryService {
       const amount = new BN(decision.amount);
 
       if (decision.direction === 'withdraw') {
-        // Withdraw from vault — agent must be the vault authority
+        // Withdraw from vault
+        const usxMint = await this.getTokenMint(targetPosition.usxTokenAccount);
+        const destinationAta = await getAssociatedTokenAddress(usxMint, payer.publicKey);
+
         const ix = createWithdrawIx(
           targetPosition.address,
           targetPosition.usxTokenAccount,
-          await getAssociatedTokenAddress(
-            // USX mint — in production this would come from vault data
-            targetPosition.usxTokenAccount, // placeholder; needs USX mint address
-            payer.publicKey,
-          ),
+          destinationAta,
           payer.publicKey,
           amount,
-          3, // tx_type: rebalance (bit 3)
-          payer.publicKey, // self as counterparty for rebalance
+          3, // tx_type: rebalance
+          payer.publicKey,
         );
 
         const result = await buildAndSendTransaction(connection, payer, [ix]);
         this.logger.info({ txSignature: result.signature }, 'Rebalance withdraw executed');
         return result.signature;
       } else {
-        // Deposit into vault — requires deposit receipt PDA
-        this.logger.info(
-          {
-            vault: targetPosition.address.toBase58(),
-            amount: decision.amount,
-          },
-          'Rebalance deposit prepared (requires deposit receipt PDA derivation)',
+        // Deposit into vault — read total_deposits for PDA derivation
+        const vaultAccountInfo = await connection.getAccountInfo(targetPosition.address);
+        if (!vaultAccountInfo) throw new Error('Vault account not found');
+
+        const totalDeposits = new BN(vaultAccountInfo.data.subarray(72, 80), 'le');
+        const [depositReceiptPda] = findDepositReceiptPda(
+          targetPosition.address,
+          payer.publicKey,
+          totalDeposits,
         );
 
-        // For deposits, we need: vault PDA, deposit receipt PDA, depositor token account,
-        // vault token account, and a KYC hash. The agent would need these set up.
-        // This is the most complex path — log the intent for now.
-        return 'deposit-pending-setup';
+        const usxMint = await this.getTokenMint(targetPosition.usxTokenAccount);
+        const sourceAta = await getAssociatedTokenAddress(usxMint, payer.publicKey);
+        const kycHash = createHash('sha256').update(`agent-rebalance-${Date.now()}`).digest();
+
+        const ix = createDepositIx(
+          targetPosition.address,
+          depositReceiptPda,
+          sourceAta,
+          targetPosition.usxTokenAccount,
+          payer.publicKey,
+          amount,
+          kycHash,
+        );
+
+        const result = await buildAndSendTransaction(connection, payer, [ix]);
+        this.logger.info({ txSignature: result.signature }, 'Rebalance deposit executed');
+        return result.signature;
       }
     } catch (err) {
       this.logger.error({ err }, 'Failed to execute rebalance transaction');
       throw err;
     }
+  }
+
+  private async getTokenMint(tokenAccount: PublicKey): Promise<PublicKey> {
+    const info = await this.provider.connection.getAccountInfo(tokenAccount);
+    if (!info) throw new Error('Token account not found');
+    // SPL token account: mint is first 32 bytes
+    return new PublicKey(info.data.subarray(0, 32));
   }
 }

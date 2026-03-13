@@ -27,16 +27,29 @@ export default function AuditPage() {
   });
 
   // Map on-chain AuditEntry to the DecisionTimeline format
-  const timelineEntries = filteredEntries.map((entry, i) => ({
-    id: String(i),
-    agent: shortenAddress(entry.agent.toBase58()),
-    actionType: ACTION_LABELS[entry.actionType] ?? `Action ${entry.actionType}`,
-    targetVault: entry.targetVault ? shortenAddress(entry.targetVault.toBase58()) : null,
-    amount: entry.amount ? Number(entry.amount.toString()) : null,
-    reasoning: `Reasoning hash: ${Buffer.from(entry.reasoningHash).toString('hex').slice(0, 16)}...`,
-    timestamp: entry.timestamp.toNumber() * 1000,
-    slot: entry.slot.toNumber(),
-  }));
+  const timelineEntries = filteredEntries.map((entry, i) => {
+    // Decode reasoning URI — strip null bytes
+    const uriBytes = Buffer.from(entry.reasoningUri);
+    const nullIndex = uriBytes.indexOf(0);
+    const reasoningUri = uriBytes.subarray(0, nullIndex > 0 ? nullIndex : uriBytes.length).toString('utf-8');
+    const isIpfs = reasoningUri.startsWith('ipfs://');
+    const ipfsLink = isIpfs
+      ? `https://gateway.pinata.cloud/ipfs/${reasoningUri.replace('ipfs://', '')}`
+      : null;
+
+    return {
+      id: String(i),
+      agent: shortenAddress(entry.agent.toBase58()),
+      actionType: ACTION_LABELS[entry.actionType] ?? `Action ${entry.actionType}`,
+      targetVault: entry.targetVault ? shortenAddress(entry.targetVault.toBase58()) : null,
+      amount: entry.amount ? Number(entry.amount.toString()) : null,
+      reasoning: `Reasoning hash: ${Buffer.from(entry.reasoningHash).toString('hex').slice(0, 16)}...`,
+      reasoningUri,
+      ipfsLink,
+      timestamp: entry.timestamp.toNumber() * 1000,
+      slot: entry.slot.toNumber(),
+    };
+  });
 
   return (
     <div className="space-y-6">
