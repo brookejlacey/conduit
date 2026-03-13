@@ -36,7 +36,7 @@ Status: `[ ]` todo · `[x]` done
 - [x] **Demo script** — What to show in 3 minutes (problem → architecture → live agent → dashboard)
 - [ ] **Record Loom video** — 3-min walkthrough for StableHacks submission
 - [x] **DoraHacks submission** — Project name, team, links, video
-- [ ] **Testnet demo link** — Dashboard URL pointing at devnet with live data
+- [x] **Testnet demo link** — https://conduit-dashboard-ten.vercel.app (live on devnet)
 
 ## P4 — Stretch Goals
 
