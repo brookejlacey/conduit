@@ -17,6 +17,7 @@
 import {
   Keypair,
   LAMPORTS_PER_SOL,
+  PublicKey,
   Transaction,
   sendAndConfirmTransaction,
 } from "@solana/web3.js";
@@ -59,7 +60,7 @@ import {
 import * as fs from "fs";
 import * as path from "path";
 
-const logger = createLogger("seed");
+const logger = createLogger("info");
 
 const USX = 1_000_000; // 6 decimals
 
@@ -109,30 +110,43 @@ async function main() {
     logger.info("Airdrop confirmed");
   }
 
-  // =========================================================================
-  // Step 1: Create mock USX mint
-  // =========================================================================
-  logger.info("Step 1: Creating USX mock token mint...");
-  const usxMint = await createMint(
-    connection,
-    payer,
-    payer.publicKey, // mint authority
-    payer.publicKey, // freeze authority
-    6 // 6 decimals like USDC
-  );
-  logger.info({ mint: usxMint.toBase58() }, "USX mint created");
+  // Check if vault already exists (for idempotent re-runs)
+  const [vaultPda] = findVaultPda(payer.publicKey);
+  const existingVault = await connection.getAccountInfo(vaultPda);
 
-  // Create payer's token account and mint USX
-  const payerTokenAccount = await getOrCreateAssociatedTokenAccount(
-    connection,
-    payer,
-    usxMint,
-    payer.publicKey,
-  );
+  // =========================================================================
+  // Step 1: Create mock USX mint or reuse existing from vault
+  // =========================================================================
+  logger.info("Step 1: Setting up USX token mint...");
+  let usxMint: PublicKey;
+  let vaultTokenAccount: PublicKey;
+  let payerTokenAddr: PublicKey;
 
-  const mintAmount = 50_000_000 * USX; // 50M USX for demo
-  await mintTo(connection, payer, usxMint, payerTokenAccount.address, payer, mintAmount);
-  logger.info({ amount: "50,000,000 USX" }, "Minted USX to payer");
+  if (existingVault) {
+    // Vault already exists — read its token account and derive the USX mint
+    vaultTokenAccount = new PublicKey(existingVault.data.subarray(40, 72));
+    const tokenAcctInfo = await connection.getAccountInfo(vaultTokenAccount);
+    usxMint = new PublicKey(tokenAcctInfo!.data.subarray(0, 32));
+    logger.info({ mint: usxMint.toBase58(), tokenAccount: vaultTokenAccount.toBase58() }, "Reusing existing vault mint & token account");
+
+    const payerAta = await getOrCreateAssociatedTokenAccount(connection, payer, usxMint, payer.publicKey);
+    await mintTo(connection, payer, usxMint, payerAta.address, payer, 50_000_000 * USX);
+    payerTokenAddr = payerAta.address;
+    logger.info({ amount: "50,000,000 USX" }, "Minted USX to payer");
+  } else {
+    usxMint = await createMint(connection, payer, payer.publicKey, payer.publicKey, 6);
+    logger.info({ mint: usxMint.toBase58() }, "USX mint created");
+
+    const payerAta = await getOrCreateAssociatedTokenAccount(connection, payer, usxMint, payer.publicKey);
+    await mintTo(connection, payer, usxMint, payerAta.address, payer, 50_000_000 * USX);
+    payerTokenAddr = payerAta.address;
+    logger.info({ amount: "50,000,000 USX" }, "Minted USX to payer");
+
+    // Create vault token account
+    const vaultTokenKeypair = Keypair.generate();
+    vaultTokenAccount = await createTokenAccount(connection, payer, usxMint, vaultPda, vaultTokenKeypair);
+    logger.info({ tokenAccount: vaultTokenAccount.toBase58() }, "Vault token account created");
+  }
 
   // =========================================================================
   // Step 2: Register institution
@@ -176,19 +190,6 @@ async function main() {
   // =========================================================================
   logger.info("Step 4: Initializing vault...");
 
-  const [vaultPda] = findVaultPda(payer.publicKey);
-
-  // Create token account owned by the vault PDA
-  const vaultTokenKeypair = Keypair.generate();
-  const vaultTokenAccount = await createTokenAccount(
-    connection,
-    payer,
-    usxMint,
-    vaultPda,
-    vaultTokenKeypair,
-  );
-  logger.info({ tokenAccount: vaultTokenAccount.toBase58() }, "Vault token account created");
-
   const policy: PolicyConfigArgs = {
     dailySpendLimit: new BN(10_000_000 * USX), // 10M USX daily limit
     maxSingleTxSize: new BN(5_000_000 * USX),  // 5M USX per transaction
@@ -225,14 +226,17 @@ async function main() {
 
   for (let i = 0; i < deposits.length; i++) {
     const { amount, label } = deposits[i];
-    const [depositReceiptPda] = findDepositReceiptPda(vaultPda, payer.publicKey, new BN(i));
+    // Read vault's total_deposits to derive correct PDA (on-chain uses total_deposits as seed)
+    const vaultAccountInfo = await connection.getAccountInfo(vaultPda);
+    const totalDeposits = new BN(vaultAccountInfo!.data.subarray(72, 80), 'le');
+    const [depositReceiptPda] = findDepositReceiptPda(vaultPda, payer.publicKey, totalDeposits);
     const depositKycHash = createHash("sha256").update(`deposit-${i}-kyc`).digest();
 
     const depositTx = new Transaction().add(
       createDepositIx(
         vaultPda,
         depositReceiptPda,
-        payerTokenAccount.address,
+        payerTokenAddr,
         vaultTokenAccount,
         payer.publicKey,
         new BN(amount),
@@ -291,31 +295,42 @@ async function main() {
   await sendTx(connection, createBatchTx, [payer], "Create settlement batch");
 
   // Add settlement entries (cross-border payments)
+  // Read batch entry_count to know where to start (for idempotent re-runs)
+  const batchAccountInfo = await connection.getAccountInfo(batchPda);
+  const batchEntryCount = batchAccountInfo ? batchAccountInfo.data.readUInt32LE(49) : 0;
+
   const entries = [
     { amount: 500_000 * USX, currency: [0x45, 0x55, 0x52], fxRate: 92_000_000, label: "USX→EUR 500K" }, // EUR
     { amount: 300_000 * USX, currency: [0x47, 0x42, 0x50], fxRate: 79_000_000, label: "USX→GBP 300K" }, // GBP
     { amount: 200_000 * USX, currency: [0x4A, 0x50, 0x59], fxRate: 15_700_000_000, label: "USX→JPY 200K" }, // JPY
   ];
 
-  for (let i = 0; i < entries.length; i++) {
-    const { amount, currency, fxRate, label } = entries[i];
-    const [entryPda] = findSettlementEntryPda(batchPda, i);
+  if (batchEntryCount >= entries.length) {
+    logger.info({ entryCount: batchEntryCount }, "Settlement entries already exist, skipping");
+  } else {
+    for (let i = batchEntryCount; i < entries.length; i++) {
+      const { amount, currency, fxRate, label } = entries[i];
+      // Re-read batch to get current entry_count for PDA
+      const currentBatch = await connection.getAccountInfo(batchPda);
+      const currentCount = currentBatch!.data.readUInt32LE(49);
+      const [entryPda] = findSettlementEntryPda(batchPda, currentCount);
 
-    const addEntryTx = new Transaction().add(
-      createAddEntryIx(
-        batchPda,
-        entryPda,
-        vaultPda, // from vault
-        vaultPda, // to vault (self for demo)
-        payer.publicKey,
-        new BN(amount),
-        currency,
-        new BN(fxRate),
-      ),
-    );
-    await sendTx(connection, addEntryTx, [payer], label);
+      const addEntryTx = new Transaction().add(
+        createAddEntryIx(
+          batchPda,
+          entryPda,
+          vaultPda, // from vault
+          vaultPda, // to vault (self for demo)
+          payer.publicKey,
+          new BN(amount),
+          currency,
+          new BN(fxRate),
+        ),
+      );
+      await sendTx(connection, addEntryTx, [payer], label);
+    }
+    logger.info({ entries: entries.length }, "Settlement entries added");
   }
-  logger.info({ entries: entries.length }, "Settlement entries added");
 
   // =========================================================================
   // Step 8: Log audit entries

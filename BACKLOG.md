@@ -8,8 +8,8 @@ Status: `[ ]` todo · `[x]` done
 
 ## P0 — Ship Blockers
 
-- [ ] **Deploy programs to devnet** — All 4 programs need to be live on devnet so dashboard shows real data
-- [x] **Seed demo data script** — Full pipeline: institution, agent, vault, deposits, yield, settlement batch, audit entries (ready to run when programs deployed)
+- [x] **Deploy programs to devnet** — All 4 programs live on devnet (2026-03-13)
+- [x] **Seed demo data script** — Full pipeline seeded on devnet (2026-03-13)
 - [x] **Dashboard error states** — All pages gracefully handle RPC errors and empty states
 
 ## P1 — Dashboard Polish
@@ -29,7 +29,7 @@ Status: `[ ]` todo · `[x]` done
 - [x] **Settlement batching** — Aggregate cross-border payments into batches
 - [x] **On-chain audit logging** — Hash reasoning text, store hash + URI on-chain
 - [x] **Cron scheduler** — Rebalance every 15min, settlements every 4hrs, compliance every 5min
-- [ ] **E2E agent flow** — Agent starts → analyzes → decides → executes → logs (blocked: needs devnet deploy)
+- [ ] **E2E agent flow** — Agent starts → analyzes → decides → executes → logs
 
 ## P3 — Demo & Submission
 

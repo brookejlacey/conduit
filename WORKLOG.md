@@ -4,28 +4,33 @@
 
 ---
 
-## Current Session (2026-03-11, continued)
+## Current Session (2026-03-13)
 
 ### What shipped
-- **Vault detail page** — `/dashboard/vaults/[index]` with full policy config, addresses, counterparties, activity log
-- **Agent detail page** — `/dashboard/agents/[index]` with identity, scoped programs, decision timeline
-- **Settlement batch detail** — `/dashboard/settlements/[index]` with netting breakdown, timeline, metrics
-- **Clickable cards/rows** — All list pages now link to detail views
-- **Responsive sidebar** — Mobile hamburger menu with slide-out overlay, close on nav
-- **Loading skeletons** — Replaced all spinners with skeleton loaders (cards, table rows, timeline)
-- **Header network display** — Shows actual network (devnet/localnet) instead of hardcoded "Localnet"
-- **WebSocket subscriptions** — All 4 hooks use `onProgramAccountChange` for real-time updates
-- **Updated e2e tests** — All 17 tests passing with dual-sidebar DOM
+- **Deployed all 4 programs to devnet** — vault, agent-registry, settlement, audit-log
+- **Fixed cross-program ID references** — Settlement had stale vault program ID, audit-log had stale agent-registry ID
+- **Seeded demo data on devnet** — Institution, agent, vault (8.5M USX + 125K yield), 3 settlement entries, 7 audit logs
+- **Made seed script idempotent** — Handles re-runs gracefully (reads on-chain state for PDA derivation)
+- **Rebuilt SDK** — dist had stale program IDs from old build
 
 ### What's next
-- **P0: Deploy programs to devnet** — BLOCKED by airdrop rate limit
-- **P0: Seed demo data** — Depends on deploy
-- **P3: Demo script** — Can draft structure now
-- **P4: Stretch goals** — Netting visualization, yield chart, compliance PDF
+- **P2: E2E agent flow** — Now unblocked with devnet deploy
+- **P3: Record Loom video** — 3-min walkthrough
+- **P3: Testnet demo link** — Dashboard URL with live data
 
 ### Blockers
-- Devnet airdrop rate limited (wallet: `CEsL1n9oUiWRPAX2n245tg3nJXRzaVRJTa251nAkQ4mw`)
 - Anchor build/test requires WSL (not native Windows)
+
+---
+
+## Previous Session (2026-03-11)
+
+### What shipped
+- Vault, agent, settlement detail pages
+- Responsive mobile sidebar with hamburger menu
+- Skeleton loading states, WebSocket real-time updates
+- Header shows actual network
+- All 17 Playwright e2e tests passing
 
 ---
 

@@ -3,7 +3,7 @@ use crate::state::{SettlementBatch, SettlementEntry, SettlementStatus};
 use crate::errors::SettlementError;
 
 /// Vault program ID for ownership validation
-const VAULT_PROGRAM_ID: Pubkey = pubkey!("GdmDuzHbXd2hytSpPyfwnaARSCTnntbTnniAPLr3JRHb");
+const VAULT_PROGRAM_ID: Pubkey = pubkey!("Ctd8BHaHPD7QUjk18SeRkaadpkR5dDF2opq4Cn6vGPii");
 
 #[derive(Accounts)]
 pub struct AddEntry<'info> {

@@ -3,7 +3,7 @@ use crate::state::AuditEntry;
 use crate::errors::AuditError;
 
 /// Agent registry program ID for cross-program PDA verification
-const AGENT_REGISTRY_PROGRAM_ID: Pubkey = pubkey!("2bm9F6XrH3NoTKUQgSM5uP5edKtGpcau9pHK6QiPUz5v");
+const AGENT_REGISTRY_PROGRAM_ID: Pubkey = pubkey!("D6ixuieTocq25Rf2Ru4qAAuxSPx5mbR6UABjY7PoNDnh");
 
 #[derive(Accounts)]
 #[instruction(
