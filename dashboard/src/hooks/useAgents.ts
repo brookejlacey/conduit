@@ -25,9 +25,10 @@ export function useAgents(): UseAgentsResult {
       if (isInitial) setLoading(true);
       setError(null);
 
-      const accounts = await connection.getProgramAccounts(AGENT_REGISTRY_PROGRAM_ID, {
-        commitment: 'confirmed',
-      });
+      const accounts = await Promise.race([
+        connection.getProgramAccounts(AGENT_REGISTRY_PROGRAM_ID, { commitment: 'confirmed' }),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('RPC request timed out')), 10000)),
+      ]);
 
       const decoded: AgentIdentity[] = [];
       for (const { account } of accounts) {

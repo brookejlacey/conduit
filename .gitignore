@@ -37,3 +37,4 @@ logs/
 # Keys (never commit)
 *.json.bak
 keypairs/
+.vercel

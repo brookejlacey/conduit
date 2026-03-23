@@ -25,9 +25,10 @@ export function useAuditLog(): UseAuditLogResult {
       if (isInitial) setLoading(true);
       setError(null);
 
-      const accounts = await connection.getProgramAccounts(AUDIT_LOG_PROGRAM_ID, {
-        commitment: 'confirmed',
-      });
+      const accounts = await Promise.race([
+        connection.getProgramAccounts(AUDIT_LOG_PROGRAM_ID, { commitment: 'confirmed' }),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('RPC request timed out')), 10000)),
+      ]);
 
       const decoded: AuditEntry[] = [];
       for (const { account } of accounts) {

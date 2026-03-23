@@ -25,9 +25,10 @@ export function useVaults(): UseVaultsResult {
       if (isInitial) setLoading(true);
       setError(null);
 
-      const accounts = await connection.getProgramAccounts(VAULT_PROGRAM_ID, {
-        commitment: 'confirmed',
-      });
+      const accounts = await Promise.race([
+        connection.getProgramAccounts(VAULT_PROGRAM_ID, { commitment: 'confirmed' }),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('RPC request timed out')), 10000)),
+      ]);
 
       const decoded: VaultAccount[] = [];
       for (const { account } of accounts) {
