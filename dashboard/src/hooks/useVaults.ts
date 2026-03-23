@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useConnection } from '@solana/wallet-adapter-react';
 import type { VaultAccount } from '@conduit/sdk';
 import { VAULT_PROGRAM_ID, decodeVaultAccount } from '@conduit/sdk';
@@ -18,11 +18,10 @@ export function useVaults(): UseVaultsResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const subscriptionRef = useRef<number | null>(null);
 
-  const fetchVaults = useCallback(async (isInitial: boolean) => {
+  const fetchVaults = useCallback(async () => {
     try {
-      if (isInitial) setLoading(true);
+      setLoading(true);
       setError(null);
 
       const accounts = await Promise.race([
@@ -44,31 +43,13 @@ export function useVaults(): UseVaultsResult {
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch vaults'));
     } finally {
-      if (isInitial) setLoading(false);
+      setLoading(false);
     }
   }, [connection]);
 
   useEffect(() => {
-    fetchVaults(true);
-
-    // Subscribe to program account changes for real-time updates
-    try {
-      subscriptionRef.current = connection.onProgramAccountChange(
-        VAULT_PROGRAM_ID,
-        () => { fetchVaults(false); },
-        'confirmed',
-      );
-    } catch {
-      // WebSocket subscription may not be supported on all endpoints
-    }
-
-    return () => {
-      if (subscriptionRef.current !== null) {
-        connection.removeProgramAccountChangeListener(subscriptionRef.current);
-        subscriptionRef.current = null;
-      }
-    };
-  }, [connection, refreshKey, fetchVaults]);
+    fetchVaults();
+  }, [fetchVaults, refreshKey]);
 
   return {
     vaults,

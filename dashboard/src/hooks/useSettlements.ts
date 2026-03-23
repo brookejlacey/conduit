@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useConnection } from '@solana/wallet-adapter-react';
 import type { SettlementBatch } from '@conduit/sdk';
 import { SETTLEMENT_PROGRAM_ID, decodeSettlementBatch } from '@conduit/sdk';
@@ -18,11 +18,10 @@ export function useSettlements(): UseSettlementsResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const subscriptionRef = useRef<number | null>(null);
 
-  const fetchBatches = useCallback(async (isInitial: boolean) => {
+  const fetchBatches = useCallback(async () => {
     try {
-      if (isInitial) setLoading(true);
+      setLoading(true);
       setError(null);
 
       const accounts = await Promise.race([
@@ -45,30 +44,13 @@ export function useSettlements(): UseSettlementsResult {
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch settlements'));
     } finally {
-      if (isInitial) setLoading(false);
+      setLoading(false);
     }
   }, [connection]);
 
   useEffect(() => {
-    fetchBatches(true);
-
-    try {
-      subscriptionRef.current = connection.onProgramAccountChange(
-        SETTLEMENT_PROGRAM_ID,
-        () => { fetchBatches(false); },
-        'confirmed',
-      );
-    } catch {
-      // WebSocket subscription may not be supported
-    }
-
-    return () => {
-      if (subscriptionRef.current !== null) {
-        connection.removeProgramAccountChangeListener(subscriptionRef.current);
-        subscriptionRef.current = null;
-      }
-    };
-  }, [connection, refreshKey, fetchBatches]);
+    fetchBatches();
+  }, [fetchBatches, refreshKey]);
 
   return {
     batches,

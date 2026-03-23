@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useConnection } from '@solana/wallet-adapter-react';
 import type { AuditEntry } from '@conduit/sdk';
 import { AUDIT_LOG_PROGRAM_ID, decodeAuditEntry } from '@conduit/sdk';
@@ -18,11 +18,10 @@ export function useAuditLog(): UseAuditLogResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const subscriptionRef = useRef<number | null>(null);
 
-  const fetchAuditLog = useCallback(async (isInitial: boolean) => {
+  const fetchAuditLog = useCallback(async () => {
     try {
-      if (isInitial) setLoading(true);
+      setLoading(true);
       setError(null);
 
       const accounts = await Promise.race([
@@ -45,30 +44,13 @@ export function useAuditLog(): UseAuditLogResult {
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch audit log'));
     } finally {
-      if (isInitial) setLoading(false);
+      setLoading(false);
     }
   }, [connection]);
 
   useEffect(() => {
-    fetchAuditLog(true);
-
-    try {
-      subscriptionRef.current = connection.onProgramAccountChange(
-        AUDIT_LOG_PROGRAM_ID,
-        () => { fetchAuditLog(false); },
-        'confirmed',
-      );
-    } catch {
-      // WebSocket subscription may not be supported
-    }
-
-    return () => {
-      if (subscriptionRef.current !== null) {
-        connection.removeProgramAccountChangeListener(subscriptionRef.current);
-        subscriptionRef.current = null;
-      }
-    };
-  }, [connection, refreshKey, fetchAuditLog]);
+    fetchAuditLog();
+  }, [fetchAuditLog, refreshKey]);
 
   return {
     entries,

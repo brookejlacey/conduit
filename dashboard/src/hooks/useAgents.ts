@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useConnection } from '@solana/wallet-adapter-react';
 import type { AgentIdentity } from '@conduit/sdk';
 import { AGENT_REGISTRY_PROGRAM_ID, decodeAgentIdentity } from '@conduit/sdk';
@@ -18,11 +18,10 @@ export function useAgents(): UseAgentsResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const subscriptionRef = useRef<number | null>(null);
 
-  const fetchAgents = useCallback(async (isInitial: boolean) => {
+  const fetchAgents = useCallback(async () => {
     try {
-      if (isInitial) setLoading(true);
+      setLoading(true);
       setError(null);
 
       const accounts = await Promise.race([
@@ -44,30 +43,13 @@ export function useAgents(): UseAgentsResult {
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch agents'));
     } finally {
-      if (isInitial) setLoading(false);
+      setLoading(false);
     }
   }, [connection]);
 
   useEffect(() => {
-    fetchAgents(true);
-
-    try {
-      subscriptionRef.current = connection.onProgramAccountChange(
-        AGENT_REGISTRY_PROGRAM_ID,
-        () => { fetchAgents(false); },
-        'confirmed',
-      );
-    } catch {
-      // WebSocket subscription may not be supported
-    }
-
-    return () => {
-      if (subscriptionRef.current !== null) {
-        connection.removeProgramAccountChangeListener(subscriptionRef.current);
-        subscriptionRef.current = null;
-      }
-    };
-  }, [connection, refreshKey, fetchAgents]);
+    fetchAgents();
+  }, [fetchAgents, refreshKey]);
 
   return {
     agents,
