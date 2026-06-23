@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useConnection } from '@solana/wallet-adapter-react';
 import type { AuditEntry } from '@conduit/sdk';
-import { AUDIT_LOG_PROGRAM_ID, decodeAuditEntry } from '@conduit/sdk';
+import { AUDIT_LOG_PROGRAM_ID, decodeAuditEntry, hasDiscriminator, ACCOUNT_DISCRIMINATOR } from '@conduit/sdk';
 
 interface UseAuditLogResult {
   entries: AuditEntry[];
@@ -31,8 +31,10 @@ export function useAuditLog(): UseAuditLogResult {
 
       const decoded: AuditEntry[] = [];
       for (const { account } of accounts) {
+        const data = Buffer.from(account.data);
+        if (!hasDiscriminator(data, ACCOUNT_DISCRIMINATOR.AuditEntry)) continue;
         try {
-          const entry = decodeAuditEntry(Buffer.from(account.data));
+          const entry = decodeAuditEntry(data);
           decoded.push(entry);
         } catch {
           continue;

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useConnection } from '@solana/wallet-adapter-react';
 import type { VaultAccount } from '@conduit/sdk';
-import { VAULT_PROGRAM_ID, decodeVaultAccount } from '@conduit/sdk';
+import { VAULT_PROGRAM_ID, decodeVaultAccount, hasDiscriminator, ACCOUNT_DISCRIMINATOR } from '@conduit/sdk';
 
 interface UseVaultsResult {
   vaults: VaultAccount[];
@@ -31,8 +31,10 @@ export function useVaults(): UseVaultsResult {
 
       const decoded: VaultAccount[] = [];
       for (const { account } of accounts) {
+        const data = Buffer.from(account.data);
+        if (!hasDiscriminator(data, ACCOUNT_DISCRIMINATOR.Vault)) continue;
         try {
-          const vault = decodeVaultAccount(Buffer.from(account.data));
+          const vault = decodeVaultAccount(data);
           decoded.push(vault);
         } catch {
           continue;

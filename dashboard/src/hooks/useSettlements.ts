@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useConnection } from '@solana/wallet-adapter-react';
 import type { SettlementBatch } from '@conduit/sdk';
-import { SETTLEMENT_PROGRAM_ID, decodeSettlementBatch } from '@conduit/sdk';
+import { SETTLEMENT_PROGRAM_ID, decodeSettlementBatch, hasDiscriminator, ACCOUNT_DISCRIMINATOR } from '@conduit/sdk';
 
 interface UseSettlementsResult {
   batches: SettlementBatch[];
@@ -31,8 +31,10 @@ export function useSettlements(): UseSettlementsResult {
 
       const decoded: SettlementBatch[] = [];
       for (const { account } of accounts) {
+        const data = Buffer.from(account.data);
+        if (!hasDiscriminator(data, ACCOUNT_DISCRIMINATOR.SettlementBatch)) continue;
         try {
-          const batch = decodeSettlementBatch(Buffer.from(account.data));
+          const batch = decodeSettlementBatch(data);
           decoded.push(batch);
         } catch {
           continue;

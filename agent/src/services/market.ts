@@ -22,8 +22,8 @@ export class MarketService {
 
     this.logger.debug('Fetching market snapshot...');
 
-    // In production, fetch from real market data APIs (CoinGecko, exchange APIs, etc.)
-    // For hackathon, return realistic mock data
+    // Mock market data for the devnet demo. In production this would pull from
+    // real market data APIs (CoinGecko, exchange feeds, on-chain oracles).
     const snapshot: MarketSnapshot = {
       timestamp: now,
       fxRates: {

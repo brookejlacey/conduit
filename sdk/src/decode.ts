@@ -10,6 +10,28 @@ import type { SettlementBatch, SettlementEntry } from './types/settlement';
  * These are used to identify account types when deserializing from raw bytes.
  */
 
+/**
+ * Anchor account discriminators (first 8 bytes of sha256("account:<StructName>")).
+ * A program owns multiple account types, so `getProgramAccounts` returns all of
+ * them. Callers must filter by discriminator before decoding, otherwise a
+ * different account type is mis-decoded into garbage.
+ */
+export const ACCOUNT_DISCRIMINATOR = {
+  Vault: [211, 8, 232, 43, 2, 152, 117, 119],
+  AgentIdentity: [11, 149, 31, 27, 186, 76, 241, 72],
+  SettlementBatch: [109, 41, 32, 249, 12, 118, 184, 199],
+  AuditEntry: [254, 88, 234, 107, 205, 16, 148, 113],
+} as const;
+
+/** True when the first 8 bytes of `data` match the given account discriminator. */
+export function hasDiscriminator(data: Buffer, disc: readonly number[]): boolean {
+  if (data.length < 8) return false;
+  for (let i = 0; i < 8; i++) {
+    if (data[i] !== disc[i]) return false;
+  }
+  return true;
+}
+
 function readPublicKey(data: Buffer, offset: number): PublicKey {
   return new PublicKey(data.subarray(offset, offset + 32));
 }

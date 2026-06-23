@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useConnection } from '@solana/wallet-adapter-react';
 import type { AgentIdentity } from '@conduit/sdk';
-import { AGENT_REGISTRY_PROGRAM_ID, decodeAgentIdentity } from '@conduit/sdk';
+import { AGENT_REGISTRY_PROGRAM_ID, decodeAgentIdentity, hasDiscriminator, ACCOUNT_DISCRIMINATOR } from '@conduit/sdk';
 
 interface UseAgentsResult {
   agents: AgentIdentity[];
@@ -31,8 +31,10 @@ export function useAgents(): UseAgentsResult {
 
       const decoded: AgentIdentity[] = [];
       for (const { account } of accounts) {
+        const data = Buffer.from(account.data);
+        if (!hasDiscriminator(data, ACCOUNT_DISCRIMINATOR.AgentIdentity)) continue;
         try {
-          const agent = decodeAgentIdentity(Buffer.from(account.data));
+          const agent = decodeAgentIdentity(data);
           decoded.push(agent);
         } catch {
           continue;

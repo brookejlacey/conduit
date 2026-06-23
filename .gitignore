@@ -32,10 +32,15 @@ Thumbs.db
 
 # Logs
 *.log
-*.md
 logs/
 
 # Keys (never commit)
 *.json.bak
 keypairs/
 .vercel
+
+# Private agent config (not for the public repo)
+CLAUDE.md
+AGENTS.md
+.claude/
+*.tsbuildinfo
